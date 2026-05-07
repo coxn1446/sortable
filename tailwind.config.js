@@ -1,0 +1,53 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        sortable: {
+          primary: {
+            start: '#6366F1',
+            end: '#3B82F6',
+          },
+          bg: '#0F172A',
+          surface: '#111827',
+          card: '#1F2933',
+          text: {
+            primary: '#F9FAFB',
+            secondary: '#9CA3AF',
+          },
+          accent: '#22C55E',
+          danger: '#EF4444',
+          highlight: '#A78BFA',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Space Grotesk', 'Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        xl: '1rem',
+        '2xl': '1.5rem',
+        '3xl': '2rem',
+      },
+      boxShadow: {
+        soft: '0 10px 30px rgba(0,0,0,0.25)',
+        glow: '0 0 20px rgba(99,102,241,0.35)',
+      },
+      backgroundImage: {
+        'sortable-gradient': 'linear-gradient(135deg, #6366F1 0%, #3B82F6 100%)',
+      },
+      transitionTimingFunction: {
+        smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
+      },
+      scale: {
+        102: '1.02',
+        105: '1.05',
+      },
+    },
+  },
+  plugins: [],
+};

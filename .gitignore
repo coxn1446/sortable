@@ -1,0 +1,55 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Capacitor
+.capacitor
+ios/App/Pods
+ios/App/App.xcworkspace
+android/.gradle
+android/build
+android/app/build
+android/.idea
+*.xcuserstate
+
+# Secrets
+secrets/
+*.pem
+*.key
+!.gitkeep
+
+# Local uploads (development fallback when GCS not configured)
+/uploads
+
+# Logs
+logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db

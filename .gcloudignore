@@ -1,0 +1,12 @@
+.gcloudignore
+.git
+.gitignore
+
+node_modules/
+ios/
+android/
+.env
+.env.local
+secrets/
+uploads/
+build/static/*.map
