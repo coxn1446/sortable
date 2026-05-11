@@ -20,12 +20,7 @@ module.exports = async function (app) {
           'capacitor://localhost',
           'ionic://localhost',
         ].filter(Boolean)
-      : [
-          'http://localhost:3000',
-          'https://localhost:3000',
-          'capacitor://localhost',
-          'ionic://localhost',
-        ],
+      : true,
     credentials: true,
     optionsSuccessStatus: 200,
   };
@@ -45,12 +40,23 @@ module.exports = async function (app) {
     );
   }
 
+  const pgStoreOptions = {
+    pool: db.getPool(),
+    tableName: 'session',
+    createTableIfMissing: false,
+  };
+  const logicalSchema = db.getDbSchema();
+  if (logicalSchema !== 'public') {
+    pgStoreOptions.schemaName = logicalSchema;
+  }
+
+  // Apple Sign In posts back cross-site (form_post). SameSite=Lax drops the session cookie on
+  // that POST, so profile "link Apple" lost oauthProviderLinkIntent and created a new user.
+  // Google uses a GET callback, so Lax was fine there. None + Secure restores the session on Apple.
+  const sessionSameSite = isProduction ? 'none' : 'lax';
+
   const sessionConfig = {
-    store: new pgSession({
-      pool: db.getPool(),
-      tableName: 'session',
-      createTableIfMissing: false,
-    }),
+    store: new pgSession(pgStoreOptions),
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -58,7 +64,7 @@ module.exports = async function (app) {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax',
+      sameSite: sessionSameSite,
     },
     name: 'sortable.sid',
   };

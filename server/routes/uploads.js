@@ -4,13 +4,16 @@ const router = express.Router();
 
 const uploadService = require('../services/uploadService');
 const { requireAuth } = require('../middleware/requireAuth');
+const { requirePolicyConsent } = require('../middleware/requirePolicyConsent');
+
+const authWithConsent = [requireAuth, requirePolicyConsent];
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-router.post('/', requireAuth, upload.single('file'), async (req, res, next) => {
+router.post('/', ...authWithConsent, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file provided' });

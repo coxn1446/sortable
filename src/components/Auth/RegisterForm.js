@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { setUser } from '../../store/auth.reducer';
@@ -21,7 +21,11 @@ export default function RegisterForm() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const user = await register(form);
+      const user = await register({
+        username: form.username,
+        password: form.password,
+        email: form.email.trim(),
+      });
       dispatch(setUser(user));
       toast.success('Welcome to Sortable');
       navigate('/');
@@ -46,16 +50,6 @@ export default function RegisterForm() {
         />
       </label>
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-sortable-text-secondary">Email</span>
-        <input
-          type="email"
-          autoComplete="email"
-          value={form.email}
-          onChange={onChange('email')}
-          className={inputClass}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
         <span className="text-sm font-medium text-sortable-text-secondary">Password</span>
         <input
           type="password"
@@ -67,6 +61,28 @@ export default function RegisterForm() {
           className={inputClass}
         />
       </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-sortable-text-secondary">Email (optional)</span>
+        <input
+          type="email"
+          autoComplete="email"
+          value={form.email}
+          onChange={onChange('email')}
+          placeholder="you@example.com"
+          className={inputClass}
+        />
+      </label>
+      <p className="text-center text-xs leading-relaxed text-sortable-text-secondary">
+        By creating a profile, you agree to our{' '}
+        <Link to="/privacy" className="font-medium text-sortable-highlight hover:underline">
+          Privacy Policy
+        </Link>{' '}
+        and{' '}
+        <Link to="/terms" className="font-medium text-sortable-highlight hover:underline">
+          Terms &amp; Conditions
+        </Link>
+        .
+      </p>
       <Button type="submit" disabled={submitting} size="lg">
         {submitting ? 'Creating account' : 'Create account'}
       </Button>

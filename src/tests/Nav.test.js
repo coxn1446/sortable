@@ -43,20 +43,13 @@ function renderNav(authPreload) {
 }
 
 describe('Nav', () => {
-  test('guest mobile menu shows Home, Discover, and Sign up — not Lists or sidebar Sign in', async () => {
-    const user = userEvent.setup();
+  test('guest sees logo home link only — no sidebar menu controls', () => {
     renderNav({ user: null, isAuthenticated: false, loading: false });
 
-    await user.click(screen.getByRole('button', { name: /open menu/i }));
-
-    const menu = screen.getByRole('menu');
-    expect(within(menu).getByRole('link', { name: 'Home' })).toBeInTheDocument();
-    expect(within(menu).getByRole('link', { name: 'Discover' })).toBeInTheDocument();
-    expect(within(menu).queryByRole('link', { name: 'Lists' })).not.toBeInTheDocument();
-    expect(within(menu).queryByRole('link', { name: 'Make New List' })).not.toBeInTheDocument();
-    expect(within(menu).queryByRole('link', { name: 'Activity' })).not.toBeInTheDocument();
-    expect(within(menu).getByRole('link', { name: /^Sign up$/i })).toBeInTheDocument();
-    expect(within(menu).queryByRole('link', { name: /^Sign in$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /sortable home/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /open menu/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /main/i })).not.toBeInTheDocument();
   });
 
   test('signed-in mobile menu includes primary links, Profile, and Log out', async () => {

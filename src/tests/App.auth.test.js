@@ -38,6 +38,50 @@ describe('App - auth-aware behavior', () => {
     jest.resetAllMocks();
   });
 
+  test('redirects authenticated users from /login to /', async () => {
+    const user = createMockUser({ username: 'loggedin' });
+    global.fetch = jest.fn(createAuthFetchMock(true, user));
+
+    const App = require('../components/App').default;
+    const store = buildStore({
+      auth: { user, isAuthenticated: true, loading: false },
+    });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={['/login']} future={routerFutureFlags}>
+          <App />
+        </MemoryRouter>
+      </Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /create list/i })).toBeInTheDocument();
+    });
+  });
+
+  test('redirects authenticated users from /register to /', async () => {
+    const user = createMockUser({ username: 'loggedin2' });
+    global.fetch = jest.fn(createAuthFetchMock(true, user));
+
+    const App = require('../components/App').default;
+    const store = buildStore({
+      auth: { user, isAuthenticated: true, loading: false },
+    });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={['/register']} future={routerFutureFlags}>
+          <App />
+        </MemoryRouter>
+      </Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /create list/i })).toBeInTheDocument();
+    });
+  });
+
   test('redirects unauthenticated users away from /profile', async () => {
     global.fetch = jest.fn(createAuthFetchMock(false));
     const App = require('../components/App').default;
@@ -79,5 +123,29 @@ describe('App - auth-aware behavior', () => {
       expect(screen.getByRole('heading', { name: /^Account$/i })).toBeInTheDocument();
       expect(screen.getByDisplayValue('sortableuser')).toBeInTheDocument();
     });
+  });
+
+  test('home for authenticated user omits splash legal footer', async () => {
+    const user = createMockUser({ username: 'homeuser' });
+    global.fetch = jest.fn(createAuthFetchMock(true, user));
+
+    const App = require('../components/App').default;
+    const store = buildStore({
+      auth: { user, isAuthenticated: true, loading: false },
+    });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={['/']} future={routerFutureFlags}>
+          <App />
+        </MemoryRouter>
+      </Provider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: /create list/i })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole('navigation', { name: /legal/i })).not.toBeInTheDocument();
   });
 });

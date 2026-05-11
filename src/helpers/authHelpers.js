@@ -20,14 +20,36 @@ export async function register({ username, email, password }) {
   return data?.user || null;
 }
 
+export async function acceptUpdatedPolicies({ accept_privacy, accept_terms }) {
+  const data = await api.post('/api/users/me/accept-policies', {
+    accept_privacy,
+    accept_terms,
+  });
+  return data?.user ?? null;
+}
+
 export async function logout() {
   await api.post('/api/auth/logout');
 }
 
-export function googleLoginUrl() {
-  return '/api/auth/google';
+export async function fetchGoogleLinkPending() {
+  const data = await api.get('/api/auth/google/link-pending');
+  return data ?? { pending: false };
 }
 
-export function appleLoginUrl() {
-  return '/api/auth/apple';
+export async function completeGoogleLink({ password }) {
+  const data = await api.post('/api/auth/google/complete-link', { password });
+  return data?.user ?? null;
+}
+
+export async function cancelGoogleLink() {
+  await api.post('/api/auth/google/cancel-link');
+}
+
+export function googleLoginUrl(options = {}) {
+  return options.linkAccount ? '/api/auth/google/link-account' : '/api/auth/google';
+}
+
+export function appleLoginUrl(options = {}) {
+  return options.linkAccount ? '/api/auth/apple/link-account' : '/api/auth/apple';
 }

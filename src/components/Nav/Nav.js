@@ -26,8 +26,6 @@ const MAIN_NAV = [
 
 const PROFILE_NAV = { to: '/profile', label: 'Profile', Icon: IconProfile, end: false };
 
-const GUEST_MAIN_PATHS = new Set(['/', '/discover']);
-
 export function navItemClass({ isActive }) {
   return [
     'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors duration-200 ease-smooth',
@@ -38,11 +36,8 @@ export function navItemClass({ isActive }) {
   ].join(' ');
 }
 
-function MainNavLinks({ onNavigate, isAuthenticated }) {
-  const mainItems = isAuthenticated
-    ? MAIN_NAV
-    : MAIN_NAV.filter((item) => GUEST_MAIN_PATHS.has(item.to));
-  const items = isAuthenticated ? [...mainItems, PROFILE_NAV] : mainItems;
+function MainNavLinks({ onNavigate }) {
+  const items = [...MAIN_NAV, PROFILE_NAV];
   return (
     <div className="flex flex-col gap-1 px-2 py-3">
       {items.map(({ to, label, Icon, end }) => (
@@ -108,17 +103,21 @@ export default function Nav() {
     </div>
   );
 
-  const footerGuest = (
-    <div className="border-t border-white/10 p-3">
-      <NavLink
-        to="/register"
-        className="flex w-full items-center justify-center rounded-xl bg-sortable-gradient px-3 py-2.5 text-sm font-medium text-white shadow-glow transition-transform duration-200 ease-smooth hover:scale-102 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sortable-highlight"
-        onClick={closeMobile}
-      >
-        Sign up
-      </NavLink>
-    </div>
-  );
+  if (!isAuthenticated) {
+    return (
+      <header className="relative z-50 w-full shrink-0 border-b border-white/10 bg-sortable-bg/95 backdrop-blur">
+        <div className="flex items-center px-4 py-3">
+          <NavLink
+            to="/"
+            className="flex min-w-0 items-center gap-2 rounded-xl outline-none ring-sortable-highlight transition-colors hover:bg-white/5 focus-visible:ring-2"
+            aria-label="Sortable home"
+          >
+            <SortableBrandMark />
+          </NavLink>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <>
@@ -152,7 +151,7 @@ export default function Nav() {
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
-          {isAuthenticated && user ? (
+          {user ? (
             <NavLink
               to="/profile"
               className="ml-auto flex min-w-0 max-w-[55%] shrink items-center gap-2 px-4 py-3 text-right transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sortable-highlight"
@@ -188,8 +187,8 @@ export default function Nav() {
               className="absolute left-0 right-0 top-full z-50 max-h-[min(70vh,calc(100vh-4rem))] overflow-y-auto border-b border-white/10 bg-sortable-bg shadow-soft"
               role="menu"
             >
-              <MainNavLinks onNavigate={closeMobile} isAuthenticated={isAuthenticated} />
-              {isAuthenticated ? footerAuth : footerGuest}
+              <MainNavLinks onNavigate={closeMobile} />
+              {footerAuth}
             </div>
           </>
         ) : null}
@@ -208,10 +207,10 @@ export default function Nav() {
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto" aria-label="Main">
-          <MainNavLinks isAuthenticated={isAuthenticated} />
+          <MainNavLinks />
         </nav>
 
-        {isAuthenticated ? footerAuth : footerGuest}
+        {footerAuth}
       </aside>
     </>
   );

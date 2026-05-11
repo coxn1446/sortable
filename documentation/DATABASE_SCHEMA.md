@@ -3,7 +3,7 @@
 > **IMPORTANT**: This file MUST be updated whenever ANY database changes are made. Keep it synchronized with the actual database schema.
 
 ## Last Updated
-2026-05-07 (`PATCH /api/lists/:id/items/:itemId` for option `image_url`; ChoiceCard layout)
+2026-05-09 (`users.google_email`, `users.apple_email` — IdP emails for Log in Settings UI; migration `archive/migrations/06_oauth_provider_emails.sql`)
 
 ## Overview
 
@@ -16,7 +16,7 @@ The same DDL is applied to two schemas:
 | `public` | local dev and `sortable.net` (production) |
 | `qa`     | `qa.sortable.net` (QA) |
 
-Schema selection is controlled by the `ENVIRONMENT` env var; see [server/utils/dbSchema.js](../server/utils/dbSchema.js).
+Schema selection is controlled by the `ENVIRONMENT` env var (**`qa`** selects the `qa` schema, comparison is **case-insensitive** after trim; any other value including unset uses `public`); see [server/utils/dbSchema.js](../server/utils/dbSchema.js).
 
 ## Tables
 
@@ -26,11 +26,15 @@ Schema selection is controlled by the `ENVIRONMENT` env var; see [server/utils/d
 - **Columns**:
   - `user_id` (SERIAL PRIMARY KEY)
   - `username` (VARCHAR(64) NOT NULL) - **unique on `LOWER(username)`** (one account per logical name, case-insensitive)
-  - `email` (VARCHAR(255) UNIQUE) - nullable for users created via Apple Sign In with hidden email
+  - `email` (VARCHAR(255) UNIQUE) - optional profile / account email; may differ from OAuth addresses below
+  - **`google_email`** (VARCHAR(255)) - last email Google reported for this linked account (Log in Settings); NULL until OAuth supplies one
+  - **`apple_email`** (VARCHAR(255)) - last email Apple reported (may be private relay); NULL when Apple withheld it
   - `password` (VARCHAR(255)) - bcrypt hash; NULL for OAuth-only users
   - `google_id` (VARCHAR(64) UNIQUE) - Google account subject; NULL for non-Google users
   - `apple_id` (VARCHAR(64) UNIQUE) - Apple account subject; NULL for non-Apple users
   - `profile_picture` (TEXT) - URL to profile image
+  - **`privacy_policy_agreed`** (`BOOLEAN NOT NULL DEFAULT TRUE`) - `FALSE` after ops invalidates Privacy Policy ⇒ user sees re-consent modal on next login until acknowledged via **`POST /api/users/me/accept-policies`**
+  - **`terms_agreed`** (`BOOLEAN NOT NULL DEFAULT TRUE`) — same workflow for Terms & Conditions
   - `created_at` (TIMESTAMPTZ NOT NULL DEFAULT NOW())
   - `updated_at` (TIMESTAMPTZ NOT NULL DEFAULT NOW())
 - **Primary Key**: `user_id`
@@ -42,18 +46,18 @@ Schema selection is controlled by the `ENVIRONMENT` env var; see [server/utils/d
 - **Unique Constraints**: **`LOWER(username)`** (via index `idx_users_username_lower`), `email`, `google_id`, `apple_id`
 - **Check Constraints**: `users_at_least_one_credential` - at least one of `password`, `google_id`, or `apple_id` must be non-null
 - **Triggers**: `users_set_updated_at` (BEFORE UPDATE) - bumps `updated_at`
-- **Last Modified**: 2026-05-07
+- **Last Modified**: 2026-05-09
 
 ### session
 
-- **Purpose**: Express session storage managed by `connect-pg-simple`.
+- **Purpose**: Express session storage managed by `connect-pg-simple`. When the logical schema is `qa`, the store is configured with `schemaName: 'qa'` so reads/writes target **`qa.session`** explicitly (in addition to pool `search_path`).
 - **Columns**:
   - `sid` (VARCHAR NOT NULL) - session ID
   - `sess` (JSON NOT NULL) - serialized session payload
   - `expire` (TIMESTAMP(6) NOT NULL) - expiration timestamp
-- **Primary Key**: `sid`
+- **Primary Key**: `sid` (**required** — the store upserts with `ON CONFLICT (sid)`; Postgres error `42P10` means this PK is missing on that schema’s `session` table).
 - **Indexes**: `idx_session_expire` on `expire`
-- **Last Modified**: 2026-05-06
+- **Last Modified**: 2026-05-08
 
 ### lists
 
@@ -198,6 +202,13 @@ Schema selection is controlled by the `ENVIRONMENT` env var; see [server/utils/d
 
 ## Migration History
 
+### 2026-05-08 - `session` PRIMARY KEY per schema (QA login / register)
+
+- **Description**: Older **Initial Setup SQL** checked `pg_constraint` by **`conname = 'session_pkey'` only**, so after **`public.session`** already had a primary key, applying the same script to **`qa`** skipped adding **`qa.session`**’s PK. **`connect-pg-simple`** then failed with *there is no unique or exclusion constraint matching the ON CONFLICT specification* (`42P10`) on login/register when saving the session.
+- **Tables altered**: `session` — add **`PRIMARY KEY (sid)`** when missing (per schema).
+- **SQL**: [server/db/migrations/04_session_primary_key_fix.sql](../server/db/migrations/04_session_primary_key_fix.sql) — run with `search_path` targeting each affected schema (at minimum **`qa`**).
+- **Breaking Changes**: None.
+
 ### 2026-05-07 - Option photo URLs (API; schema unchanged)
 
 - **Description**: Owners set or clear **`list_items.image_url`** via **`PATCH /api/lists/:id/items/:itemId`** (optional **`label`**, optional **`image_url`** — trimmed string; **`null`** or blank clears). Pairwise **Choose** reads **`image_url`** when rendering **`ChoiceCard`**. No DDL change to **`list_items`** beyond what shipped with [2026-05-06 lists migration](#2026-05-06---lists-items-comparisons-rankings).
@@ -296,6 +307,8 @@ CREATE TABLE IF NOT EXISTS users (
   user_id          SERIAL PRIMARY KEY,
   username         VARCHAR(64)  NOT NULL,
   email            VARCHAR(255) UNIQUE,
+  google_email     VARCHAR(255),
+  apple_email      VARCHAR(255),
   password         VARCHAR(255),
   google_id        VARCHAR(64)  UNIQUE,
   apple_id         VARCHAR(64)  UNIQUE,
@@ -323,7 +336,11 @@ CREATE TABLE IF NOT EXISTS session (
 ) WITH (OIDS=FALSE);
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey'
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.contype = 'p'
+      AND t.oid = 'session'::regclass
   ) THEN
     ALTER TABLE session ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
   END IF;

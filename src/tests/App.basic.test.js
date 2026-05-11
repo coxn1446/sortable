@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -82,4 +82,27 @@ describe('App - basic rendering', () => {
       expect(screen.getAllByText(/Sign in/i).length).toBeGreaterThan(0);
     });
   });
+
+  test('legal footer appears on splash home when unauthenticated', async () => {
+    const App = require('../components/App').default;
+    const store = buildStore({
+      auth: { user: null, isAuthenticated: false, loading: false },
+    });
+
+    render(
+      <Provider store={store}>
+        <MemoryRouter initialEntries={['/']} future={routerFutureFlags}>
+          <App />
+        </MemoryRouter>
+      </Provider>
+    );
+
+    await waitFor(() => {
+      const legal = screen.getByRole('navigation', { name: /legal/i });
+      expect(legal).toBeInTheDocument();
+      expect(within(legal).getByRole('link', { name: /privacy policy/i })).toHaveAttribute('href', '/privacy');
+      expect(within(legal).getByRole('link', { name: /terms & conditions/i })).toHaveAttribute('href', '/terms');
+    });
+  });
 });
+

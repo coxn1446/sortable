@@ -21,10 +21,14 @@ CREATE TABLE IF NOT EXISTS users (
   user_id          SERIAL PRIMARY KEY,
   username         VARCHAR(64)  NOT NULL,
   email            VARCHAR(255) UNIQUE,
+  google_email     VARCHAR(255),
+  apple_email      VARCHAR(255),
   password         VARCHAR(255),
   google_id        VARCHAR(64)  UNIQUE,
   apple_id         VARCHAR(64)  UNIQUE,
-  profile_picture  TEXT,
+  profile_picture           TEXT,
+  privacy_policy_agreed     BOOLEAN NOT NULL DEFAULT TRUE,
+  terms_agreed              BOOLEAN NOT NULL DEFAULT TRUE,
   created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   CONSTRAINT users_at_least_one_credential
@@ -46,9 +50,15 @@ CREATE TABLE IF NOT EXISTS session (
   sess   JSON         NOT NULL,
   expire TIMESTAMP(6) NOT NULL
 ) WITH (OIDS=FALSE);
+-- PK must exist per session table: connect-pg-simple uses ON CONFLICT (sid). Do not test conname
+-- globally — public.session's session_pkey would hide missing PK on qa.session.
 DO $$ BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'session_pkey'
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON c.conrelid = t.oid
+    WHERE c.contype = 'p'
+      AND t.oid = 'session'::regclass
   ) THEN
     ALTER TABLE session ADD CONSTRAINT session_pkey PRIMARY KEY (sid) NOT DEFERRABLE INITIALLY IMMEDIATE;
   END IF;

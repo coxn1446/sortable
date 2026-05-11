@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
 
 import { selectUser } from '../store/auth.reducer';
 import { selectMyLists, setMyLists } from '../store/lists.reducer';
@@ -16,13 +17,56 @@ import ProfileAccountSection from '../components/profile/ProfileAccountSection';
 
 const LISTS_PREVIEW_COUNT = 6;
 
+const PROFILE_OAUTH_ERRORS = {
+  profile_link_google_in_use: 'This Google account is already used on another profile.',
+  profile_link_google_conflict: 'A different Google account is already linked to this profile.',
+  profile_link_google_failed: 'Could not link Google. Try again.',
+  profile_link_apple_in_use: 'This Apple ID is already used on another profile.',
+  profile_link_apple_conflict: 'A different Apple ID is already linked to this profile.',
+  profile_link_apple_failed: 'Could not link Apple. Try again.',
+  apple: 'Apple sign-in did not complete.',
+  google: 'Google sign-in did not complete.',
+};
+
 export default function Profile() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const user = useSelector(selectUser);
   const myLists = useSelector(selectMyLists);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const linked = searchParams.get('linked');
+    const notice = searchParams.get('notice');
+    const oauthError = searchParams.get('oauth_error');
+    if (!linked && !notice && !oauthError) return;
+
+    const next = new URLSearchParams(searchParams);
+    if (linked === 'google') {
+      toast.success('Google sign-in linked to your account.');
+      next.delete('linked');
+    } else if (linked === 'apple') {
+      toast.success('Apple sign-in linked to your account.');
+      next.delete('linked');
+    }
+    if (notice === 'google_already_linked') {
+      toast.success('Google is already linked to this account.');
+      next.delete('notice');
+    } else if (notice === 'apple_already_linked') {
+      toast.success('Apple is already linked to this account.');
+      next.delete('notice');
+    }
+    if (oauthError) {
+      toast.error(PROFILE_OAUTH_ERRORS[oauthError] || 'Could not complete sign-in link.');
+      next.delete('oauth_error');
+    }
+
+    const qs = next.toString();
+    navigate({ pathname: '/profile', search: qs ? `?${qs}` : '' }, { replace: true });
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     let active = true;

@@ -18,6 +18,8 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: false,
+    // ngrok / tunnel URLs send this host; Vite blocks unknown hosts by default
+    allowedHosts: ['.ngrok-free.app', '.ngrok-free.dev', '.ngrok.io', 'localhost', '127.0.0.1'],
     proxy: {
       '/api': 'http://localhost:8080',
       '/uploads': 'http://localhost:8080',

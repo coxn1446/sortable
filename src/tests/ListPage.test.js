@@ -257,7 +257,9 @@ describe('ListPage', () => {
     });
 
     expect(screen.getByRole('heading', { name: 'Options in this list' })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Snack bracket')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Snack bracket')).toBeInTheDocument();
+    });
     expect(screen.getByRole('switch', { name: /List visibility: public on Discover/i })).toHaveAttribute(
       'aria-checked',
       'true'

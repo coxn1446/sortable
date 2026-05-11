@@ -1,0 +1,26 @@
+# Keep Cloud Build / `gcloud run deploy --source .` context small and safe.
+# Without ignoring node_modules, COPY . . after npm ci can replace Linux deps with host files.
+
+node_modules
+npm-debug.log
+yarn-error.log
+
+.git
+.gitignore
+
+.env
+.env.*
+!.env.example
+
+build
+coverage
+uploads
+
+.DS_Store
+*.log
+
+ios/App/Pods
+android/.gradle
+android/app/build
+
+.cursor

@@ -31,6 +31,8 @@ npm run dev
 
 The Vite dev server proxies `/api/*` requests to the Express server at `http://localhost:8080`.
 
+Use `DEFAULT_CLIENT_URL=http://localhost:3000` locally so OAuth redirect URIs match the Vite origin; for hosted QA/production redirect URIs, see **OAuth (Google & Apple)** in [documentation/ARCHITECTURE.md](documentation/ARCHITECTURE.md).
+
 ### Initial database setup
 
 The full schema (including ranking tables) is documented in [documentation/DATABASE_SCHEMA.md](documentation/DATABASE_SCHEMA.md). Copy the **Initial Setup SQL** block into a new database (and into both `public` and `qa` schemas for hosted QA—see below).

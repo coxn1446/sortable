@@ -46,6 +46,8 @@ export const createMockUser = (overrides = {}) => ({
   username: 'testuser',
   email: 'test@example.com',
   profile_picture: null,
+  privacy_policy_agreed: true,
+  terms_agreed: true,
   created_at: '2026-05-06T00:00:00.000Z',
   updated_at: '2026-05-06T00:00:00.000Z',
   ...overrides,

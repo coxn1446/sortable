@@ -1,9 +1,10 @@
 require('dotenv').config({ quiet: true });
 
+const { applyAppleKeyFromProcessEnv, loadSecrets } = require('./server/utils/secrets');
+applyAppleKeyFromProcessEnv();
+
 const express = require('express');
 const path = require('path');
-
-const { loadSecrets } = require('./server/utils/secrets');
 
 async function startServer(retryCount = 0) {
   try {

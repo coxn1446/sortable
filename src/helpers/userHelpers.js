@@ -9,3 +9,13 @@ export async function updateMe(patch) {
   const data = await api.patch('/api/users/me', patch);
   return data?.user || null;
 }
+
+export async function changePassword(body) {
+  const data = await api.patch('/api/users/me/password', body);
+  return data?.user ?? null;
+}
+
+export async function unlinkOAuth(provider) {
+  const data = await api.post('/api/users/me/unlink-oauth', { provider });
+  return data?.user ?? null;
+}

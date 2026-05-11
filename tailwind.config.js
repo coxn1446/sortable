@@ -15,6 +15,8 @@ module.exports = {
           bg: '#0F172A',
           surface: '#111827',
           card: '#1F2933',
+          /** Visually separates nested ChoiceTiles from card surfaces (hero vs list compare). */
+          cardRaised: '#2d3d4d',
           text: {
             primary: '#F9FAFB',
             secondary: '#9CA3AF',
@@ -22,6 +24,18 @@ module.exports = {
           accent: '#22C55E',
           danger: '#EF4444',
           highlight: '#A78BFA',
+          /** OAuth branded buttons (provider guidelines / defaults). */
+          oauth: {
+            googleBlue: '#4285F4',
+            googleGreen: '#34A853',
+            googleYellow: '#FBBC05',
+            googleRed: '#EA4335',
+            googleButtonBg: '#FFFFFF',
+            googleButtonBorder: '#747775',
+            googleButtonText: '#1F1F1F',
+            appleButtonBg: '#000000',
+            appleButtonText: '#FFFFFF',
+          },
         },
       },
       fontFamily: {

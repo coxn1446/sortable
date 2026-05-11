@@ -34,6 +34,8 @@ android/.idea
 # Secrets
 secrets/
 *.pem
+*.p8
+AuthKey_*.p8
 *.key
 !.gitkeep
 

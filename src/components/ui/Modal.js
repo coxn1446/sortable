@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
  *   className?: string;
  *   overlayClassName?: string;
  *   disableBackdropClose?: boolean;
+ *   elevated?: boolean
  * }} props
  */
 export default function Modal({
@@ -25,8 +26,11 @@ export default function Modal({
   className = '',
   overlayClassName = '',
   disableBackdropClose = false,
+  elevated = false,
 }) {
   const titleId = useId();
+
+  /* elevated: second stacked dialog (e.g. policy reader above consent modal). */
 
   useEffect(() => {
     if (!open) return;
@@ -48,8 +52,13 @@ export default function Modal({
 
   if (!open || typeof document === 'undefined') return null;
 
+  const overlayZ = elevated ? 'z-[230]' : 'z-[200]';
+
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 sm:p-6" role="presentation">
+    <div
+      className={`fixed inset-0 ${overlayZ} flex items-center justify-center p-4 sm:p-6`}
+      role="presentation"
+    >
       <div
         className={`absolute inset-0 bg-black/55 backdrop-blur-[2px] ${overlayClassName}`}
         aria-hidden="true"

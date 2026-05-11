@@ -3,7 +3,7 @@
 > **IMPORTANT**: Keep this file updated as features are added or architecture changes.
 
 ## Last Updated
-2026-05-07 (option photos / `PATCH /api/lists/:id/items/:itemId`; Settings + ChoiceCard; auth UI: centered Login/Register; guest nav Home + Discover + Sign up footer; list Choose CTA uses sidebar link style)
+2026-05-09 (Profile: centered avatar column on desktop; Google/Apple sections + unlink rules; `PATCH /api/users/me/password`, `POST /api/users/me/unlink-oauth`; public user `has_password` via SQL `(password IS NOT NULL)`)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -44,7 +44,7 @@
 
 Sortable is a collaborative **pairwise ranking** web and iOS app. Users create lists of options, make repeated **this vs. that** choices, and the system produces a ranked list per contributor (adaptive insertion sort) plus an **aggregate** ranking across everyone's comparisons (Elo-style ratings on `item_aggregate`). Lists can be **public** (surfaced on Discover) or **private** (shareable only by link); canonical URLs use **`/list/:list_id`** (legacy **`/l/:share_slug`** redirects by resolving the slug to an id).
 
-The same codebase deploys to **development**, **QA** (`qa.sortable.net`, Postgres schema `qa`), and **production** (`sortable.net`, schema `public`). Schema selection is via `ENVIRONMENT`; see [server/utils/dbSchema.js](../server/utils/dbSchema.js) and [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
+The same codebase deploys to **development**, **QA** (`qa.sortable.net`, Postgres schema `qa`), and **production** (`sortable.net`, schema `public`). Schema selection is via `ENVIRONMENT` (**`qa`** match is case-insensitive); see [server/utils/dbSchema.js](../server/utils/dbSchema.js) and [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md).
 
 Original app-shell template reference: `App Shell Documentation/APP_SHELL_PROMPT.md` (sibling repo/folder).
 
@@ -52,7 +52,7 @@ Original app-shell template reference: `App Shell Documentation/APP_SHELL_PROMPT
 - Frontend: React 18, Redux Toolkit, Tailwind CSS v4 (design tokens in `tailwind.config.js`), Ionic React (base styles), Capacitor 6 (iOS), Vite 5
 - Backend: Node.js LTS, Express 4, Passport (local + Google + Apple), `express-session` + `connect-pg-simple`
 - Ranking: pure JS adaptive binary-insertion sort (`server/services/ranking/adaptiveSort.js`) + Elo updates (`server/services/ranking/elo.js`)
-- Database: PostgreSQL (`pg`), two logical schemas: `public` (prod/dev default) and `qa` (when `ENVIRONMENT=qa`)
+- Database: PostgreSQL (`pg`), two logical schemas: `public` (prod/dev default) and `qa` (when `ENVIRONMENT` is `qa`, case-insensitive)
 - Cloud: Google Cloud Secret Manager, optional GCS uploads, Firebase Admin (push plumbing only in v1)
 
 ## System Architecture
@@ -69,9 +69,12 @@ Original app-shell template reference: `App Shell Documentation/APP_SHELL_PROMPT
 ### Component Hierarchy
 ```
 App (NativeProvider)
-├── Nav (brand; signed-in: full primary links, Profile, username/avatar, and Sign out; mobile: brand + profile row when signed in; guests: Home and Discover only, plus Sign up in the footer — Sign in is still linked from Home hero, list pages, and Register)
+├── PolicyConsentModal (blocking when `privacy_policy_agreed` or `terms_agreed` is false — opens elevated policy reader modals sharing `src/legal/policyDocuments.js`; `POST /api/users/me/accept-policies` or Sign out)
+├── Nav (brand; guests: top bar with logo link to home only — no drawer or sidebar; signed-in: mobile menu + desktop sidebar with full primary links, Profile, and Log out)
 ├── Routes (lazy)
-│   ├── Home — hero + Create List CTA + Discover preview (“View more” → `/discover`)
+│   ├── Home — guests: splash hero with compact Register / Sign In `ChoiceCard` pair + Discover preview + legal footer; signed-in: hero + Discover preview
+│   ├── Privacy — `/privacy` — boilerplate policy (replace before production)
+│   ├── Terms — `/terms` — boilerplate terms (replace before production)
 │   ├── CreateList — shared `CreateListForm`; title, items, optional exclude button label, public toggle
 │   ├── ListPage — `/list/:id` — sub-nav Choose / Results / Settings (owner); Choose = pairwise compare; Results = rankings; Settings = owner edits title/description, add/remove items, option photo URLs (`image_url`), delete list
 │   ├── Discover, Activity (paginated + search), Profile (account + lists teaser + activity preview), ListsPage (`/lists`), Login, Register, NotFound
@@ -93,7 +96,7 @@ Shared UI primitives live under `src/components/ui/` (`Button`, `Card`, `ChoiceC
   - `lists`: List metadata by id, `myListIds`, `discoverIds`, `itemsByListId`, current `pairByListId`, `rankingByListId` — selectors `selectMyLists` / `selectDiscoverLists` are memoized with `createSelector`.
 
 ### Routing
-- **Public**: `/`, `/login`, `/register`, `/discover`, **`/list/:listId`** (Choose — default), **`/list/:listId/results`**, **`/list/:listId/settings`** (owner only in UI; others get redirected), optional **`?reset=1`** on Choose to clear the current user’s comparisons. Legacy: `/l/:slug` (client redirect to id), `/lists/:id/compare` → `/list/:id`, `/lists/:id/results` → `/list/:id/results`
+- **Public**: `/`, `/privacy`, `/terms`, `/login`, `/register`, `/discover`, **`/list/:listId`** (Choose — default), **`/list/:listId/results`**, **`/list/:listId/settings`** (owner only in UI; others get redirected), optional **`?reset=1`** on Choose to clear the current user’s comparisons. Legacy: `/l/:slug` (client redirect to id), `/lists/:id/compare` → `/list/:id`, `/lists/:id/results` → `/list/:id/results`
 - **Private** (session required): `/lists/new`; **`/lists`** (all lists you own or participate in — client search/filters on `GET /api/lists/me` data); pairwise flow under **`/list/:id`** Choose when incomplete; `/profile` (account, lists preview + `/lists`, last 10 comparisons + `/activity`); **`/activity`** (paginated comparisons + optional `q` search).
 - **Lazy Loading**: Route components use `React.lazy`
 
@@ -110,6 +113,7 @@ Shared UI primitives live under `src/components/ui/` (`Button`, `Card`, `ChoiceC
 ### Configuration Files
 - **Client Config** (`src/config/`): Client-side configuration files
 - **Server Config** (`server/config/`): Server-side configuration files
+- **Legal copy** (`src/legal/policyDocuments.js`): Single source for Privacy/Terms section bodies and the shared effective-date boilerplate line; `/privacy` and `/terms` compose page chrome around these exports; `PolicyConsentModal` opens elevated `Modal` readers with the same sections.
 
 ### Icon System
 [If you have a centralized icon system, document it here]
@@ -126,7 +130,7 @@ Shared UI primitives live under `src/components/ui/` (`Button`, `Card`, `ChoiceC
 
 ### Styling System
 [Document your styling approach]
-- **Standardized Utilities**: Custom utilities defined in tailwind.config.js
+- **Standardized Utilities**: Custom utilities defined in tailwind.config.js (`sortable.*`); OAuth button colors under **`sortable.oauth`** (Google multi-color logo paths use **`fill-sortable-oauth-googleBlue`** etc.).
 - **Spacing System**: Consistent padding, margins, and gaps
 
 ## Backend Architecture
@@ -147,11 +151,13 @@ HTTP Request
 - **Queries** (`server/queries/`): Raw SQL queries, data access
 
 ### Authentication Flow
-1. User submits credentials
-2. Passport strategy validates
-3. User serialized to session
-4. Session stored in PostgreSQL
-5. Subsequent requests deserialize user from session
+1. User submits credentials (local), or starts an OAuth redirect (Google / Apple).
+2. Passport strategy validates (local bcrypt, OAuth profile).
+3. For **Google**, if the Google subject is unknown but the **verified email** already belongs to a **local (password) account** with no `google_id`, the server stores **`pendingGoogleLink`** on the session and redirects to `/login?google_link=1`. The user **must POST** ` /api/auth/google/complete-link` with their **account password** before `google_id` is written. Other collisions (email tied to a **different** `google_id`, or **OAuth-only** account without a password) redirect back to login with a specific `error=` query for the toast message.
+4. **While signed in**, **`GET /api/auth/google/link-account`** or **`GET /api/auth/apple/link-account`** sets a short-lived **`oauthProviderLinkIntent`** (must match the current session user on callback), then redirects into the normal OAuth authorize URL. On success the callback redirects to **`/profile?linked=google`** or **`/profile?linked=apple`** (or **`/profile?oauth_error=...`** on failure). Linking enforces: provider subject not already on another user; account email (if set) must match the email returned by the provider when the provider supplies one.
+5. User serialized to session (`user_id`).
+6. Session stored in PostgreSQL
+7. Subsequent requests deserialize user from session
 
 ## Database Architecture
 
@@ -159,7 +165,7 @@ HTTP Request
 - Connection pooling via `pg.Pool`
 - Health checks with retries
 - Graceful shutdown handling
-- **Schema routing**: when `ENVIRONMENT=qa`, the pool wrapper sets `search_path` to `qa, public` so QA Cloud Run (`qa.sortable.net`) uses isolated tables alongside production (`public`) in the same database.
+- **Schema routing**: when `ENVIRONMENT` selects `qa`, the pool wrapper sets `search_path` to `qa, public` so QA Cloud Run (`qa.sortable.net`) uses isolated tables alongside production (`public`) in the same database. The session store (`connect-pg-simple`) also sets **`schemaName: 'qa'`** so session rows always use **`qa.session`** (avoids mis-resolving `"session"` if `search_path` ever differs).
 
 ### Query Organization
 - Queries grouped by feature domain
@@ -173,15 +179,23 @@ HTTP Request
 - `POST /api/auth/login` - Local login
 - `POST /api/auth/register` - User registration
 - `GET /api/auth/google` - Initiate Google OAuth flow
-- `GET /api/auth/google/callback` - Google OAuth callback
+- `GET /api/auth/google/link-account` - **Session required** (otherwise redirect to `/login?next=/profile`). Starts an in-session **link** to attach Google to the current user, then redirects through `GET /api/auth/google`. Success → **`/profile?linked=google`**; failure → **`/profile?oauth_error=...`**
+- `GET /api/auth/google/callback` - Google OAuth callback (redirects: default success → `/` or **`oauthPostSuccessRedirect`** when set; pending anonymous link → `/login?google_link=1`; failures → `/login?error=...` or **`/profile?oauth_error=...`** when linking from profile)
+- `GET /api/auth/google/link-pending` - Returns `{ pending, email?, username?, expired? }` for the Google **link-in-progress** session state (no secrets)
+- `POST /api/auth/google/complete-link` - Body `{ password }`. Verifies password for the account matching the pending link, sets `google_id` (when still unset), establishes session. Errors use `code`: `GOOGLE_LINK_*` (see handler)
+- `POST /api/auth/google/cancel-link` - Clears a pending Google link attempt (`{ ok: true }`)
 - `GET /api/auth/apple` - Initiate Apple Sign In flow
-- `POST /api/auth/apple/callback` - Apple Sign In callback
+- `GET /api/auth/apple/link-account` - **Session required**. Same pattern as Google; success **`/profile?linked=apple`**
+- `POST /api/auth/apple/callback` - Apple Sign In callback (same redirect semantics as Google for link flow vs default `/` or `/login?error=apple`)
 - `POST /api/auth/logout` - Logout and destroy session
-- `GET /api/auth/me` - Get current authenticated user (public fields)
+- `GET /api/auth/me` - Get current authenticated user (public fields; includes **`has_google`**, **`has_apple`** booleans — not stored columns, derived from provider ids)
 
 ### Current user (session)
-- `GET /api/users/me` — Same public user shape as `GET /api/auth/me` (authenticated); response via `toPublicUser`.
-- `PATCH /api/users/me` — Update `username` (trimmed, max 64, **case-insensitive unique**), `email` (nullable), and/or `profile_picture` (nullable image URL). Returns `{ user }`. **409** with `USERNAME_TAKEN` or `EMAIL_TAKEN` when applicable.
+- `GET /api/users/me` — Same public user shape as `GET /api/auth/me` (authenticated); response via `toPublicUser`. Includes **`has_google`**, **`has_apple`**, and **`has_password`** (derived server-side; not literal table columns on the wire). Includes **`google_email`** / **`apple_email`** when the IdP last supplied an address (for Log in Settings). Includes **`privacy_policy_agreed`** and **`terms_agreed`** (boolean). When either is **`false`**, the client shows a blocking policy modal; most write APIs return **403** `POLICY_CONSENT_REQUIRED` until resolved.
+- `POST /api/users/me/accept-policies` — Body `{ accept_privacy: boolean, accept_terms: boolean }`. For each column currently **`false`**, the matching body flag must be **`true`**; sets acknowledged flags to **`true`**. Returns `{ user }`. **400** with `PRIVACY_ACCEPTANCE_REQUIRED` / `TERMS_ACCEPTANCE_REQUIRED` when a required acknowledgment is missing.
+- `PATCH /api/users/me` — Update `username` (trimmed, max 64, **case-insensitive unique**), `email` (nullable), and/or `profile_picture` (nullable image URL). Returns `{ user }`. **409** with `USERNAME_TAKEN` or `EMAIL_TAKEN` when applicable. **Blocked** (via `requirePolicyConsent`) when policy flags are **`false`**.
+- `PATCH /api/users/me/password` — Body `{ new_password }` or `{ current_password, new_password }` when a password already exists. **Auth** + policy consent + rate limit. Returns `{ user }`. **400** with codes such as `CURRENT_PASSWORD_REQUIRED`, `CURRENT_PASSWORD_WRONG`, `PASSWORD_TOO_SHORT`.
+- `POST /api/users/me/unlink-oauth` — Body `{ provider: 'google' | 'apple' }`. Removes the provider link only if another credential remains (**password** and/or the other provider). **400** `SET_PASSWORD_REQUIRED` when this would leave the account with no sign-in path. **Auth** + policy consent + rate limit. Returns `{ user }`.
 
 ### Lists & ranking
 - `POST /api/lists` — Create list (body: `title`, `description`, `items`[], `is_public`, optional `exclude_choice_label` max 50 for the pairwise exclude button label). Auth required.
@@ -205,12 +219,12 @@ HTTP Request
 
 ### Lists & items
 - **Description**: CRUD for lists and line items (including **`PATCH /api/lists/:id`** for metadata, **`PATCH /api/lists/:id/items/:itemId`** for option **`label`** / **`image_url`**, and **`DELETE`** list/item owner endpoints); share via `share_slug`. Owners add option photos from **`/list/:id/settings`** by uploading via **`POST /api/uploads`** (multipart `file`), then **`image_url`** is set on that item.
-- **Routes**: **`/lists/new`** create flow; **`/`** hero + Create List + Discover preview; **`/lists`** owned + participating lists (search / filter UI); **`/profile`** account editor, lists teaser + `/lists`, activity preview + `/activity`; **`/discover`** full Discover grid
+- **Routes**: **`/lists/new`** create flow; **`/`** splash (guest pairwise Register / Sign In) + Discover preview; signed-in hero + **`/lists/new`** entry + Discover preview; **`/lists`** owned + participating lists (search / filter UI); **`/profile`** account editor, lists teaser + `/lists`, activity preview + `/activity`; **`/discover`** full Discover grid
 - **State**: `lists` Redux slice; server is source of truth after mutations
 - **Database**: `lists` (incl. optional `exclude_choice_label`), `list_items`, `list_contributors`
 
 ### Pairwise comparisons
-- **Description**: Adaptive insertion sort picks the next pair; each choice persisted in `comparisons`. **`ChoiceCard`** shows the option **`label`** at the top with **`image_url`** beneath when set; when **`image_url`** is absent the card shows only the centered **`label`**. Each Choice card exposes a secondary action to exclude an option from *this viewer’s* ranking (copy from `exclude_choice_label` or default **Remove**) without deleting the underlying `list_item`.
+- **Description**: Adaptive insertion sort picks the next pair; each choice persisted in `comparisons`. **`ChoiceCard`** shows the option **`label`** at the top with **`image_url`** beneath when set; when **`image_url`** is absent the card shows only the centered **`label`**. Optional **`compact`** prop reduces min-height / typography for tight layouts (e.g. guest home hero Register vs Sign In); optional **`elevatedSurface`** applies **`sortable-cardRaised`** on nested cards. Each Choice card exposes a secondary action to exclude an option from *this viewer’s* ranking (copy from `exclude_choice_label` or default **Remove**) without deleting the underlying `list_item` (`onExclude` omitted ⇒ no exclude row).
 - **Routes**: **`/list/:listId`** (Choose / Results / Settings sub-navigation); **`?reset=1`** clears the viewer’s comparisons via `POST /my-ranking/reset` (also clears exclusions)
 - **Components**: `ChoiceCard`, `ComparePanel`
 - **Database**: `comparisons`, `user_sort_state`, `user_item_ranks`, **`user_list_item_exclusions`**
@@ -231,6 +245,35 @@ HTTP Request
 - **Firebase (latest)**: Push notifications
 - **Stripe (latest)**: Payments
 - **Google Places API (latest)**: Location services
+
+### OAuth (Google & Apple)
+
+Passport registers Google and Apple strategies when the corresponding env vars are set ([`server/loaders/passport.js`](../server/loaders/passport.js)). Callback URLs are always:
+
+- `{DEFAULT_CLIENT_URL}/api/auth/google/callback`
+- `{DEFAULT_CLIENT_URL}/api/auth/apple/callback`
+
+**`DEFAULT_CLIENT_URL` per environment** (must match the browser origin users use — see [vite.config.mjs](../vite.config.mjs) dev proxy):
+
+| Environment | Typical `DEFAULT_CLIENT_URL` |
+| --- | --- |
+| Local dev (Vite + Express) | `http://localhost:3000` |
+| QA (`qa.sortable.net`) | `https://qa.sortable.net` |
+| Production (`sortable.net`) | `https://sortable.net` |
+
+**Google Cloud Console (OAuth 2.0 Web client)** — either one client listing all redirect URIs, or separate clients per environment with matching `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` per Cloud Run service:
+
+- **Authorized JavaScript origins**: `http://localhost:3000`, `https://qa.sortable.net`, `https://sortable.net` (add `https://www.sortable.net` if that origin is used).
+- **Authorized redirect URIs**: `http://localhost:3000/api/auth/google/callback`, `https://qa.sortable.net/api/auth/google/callback`, `https://sortable.net/api/auth/google/callback` (and `www` variant if applicable).
+
+**Apple (Sign in with Apple)** — Services ID web configuration:
+
+- **Return URLs**: same three absolute URLs as Google, with path `/api/auth/apple/callback`.
+- **Env**: `APPLE_CLIENT_ID` (Services ID), `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_KEY` (`.p8` private key contents). In `.env`, multi-line PEM is often stored as a single line with `\n` escapes.
+
+**Secrets (QA / production)**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_KEY` load from Secret Manager when unset on the process ([`server/utils/secrets.js`](../server/utils/secrets.js)).
+
+**Capacitor / native**: Web OAuth flows assume the SPA is served from the same site as the API in production. If Sign in with Apple or Google fails inside the iOS shell, add provider entries for the WebView origin (e.g. `capacitor://localhost`) only after confirming Apple/Google allow that configuration.
 
 ### Native Integrations
 - **Capacitor (latest)**: iOS/Android native features
@@ -280,11 +323,13 @@ Deploy **two** services from the same image (see [README.md](../README.md)):
 | Service | Domain | Env | Postgres `search_path` |
 | --- | --- | --- | --- |
 | `sortable` | `sortable.net` | `NODE_ENV=production`, `ENVIRONMENT=production` or unset | `public` |
-| `sortable-qa` | `qa.sortable.net` | `NODE_ENV=production`, `ENVIRONMENT=qa` | `qa`, then `public` |
+| `sortable-qa` | `qa.sortable.net` | `NODE_ENV=production`, `ENVIRONMENT=qa` (case-insensitive) | `qa`, then `public` |
 
 1. Apply the **Initial Setup SQL** from [DATABASE_SCHEMA.md](DATABASE_SCHEMA.md) in `public`, then `CREATE SCHEMA IF NOT EXISTS qa` and mirror the same DDL into `qa` (documented in that file).
 2. Map custom domains in Cloud Run; point DNS records at Google as shown by `gcloud run domain-mappings`.
 3. Set `DEFAULT_CLIENT_URL` per service (`https://sortable.net` vs `https://qa.sortable.net`) for OAuth.
+4. **Cloud SQL socket on Cloud Run**: pass `--add-cloudsql-instances=PROJECT:REGION:INSTANCE` on deploy (or set the same on the service) so the Unix socket exists under `/cloudsql/`. Production instance **`sortable-pg`** is in **`northamerica-northeast1`** (project `sortable-495623`). Cloud Run for `sortable` may run in **`us-central1`** with cross-region attachment; without the flag, startup fails at DB connect (`ENOENT` on the socket). Other config (`DB_*`, `SESSION_SECRET`, OAuth, etc.) loads from Secret Manager when unset in the service env—see [server/utils/secrets.js](../server/utils/secrets.js) and `.env.example`.
+5. **Service env (non-secret)**: at minimum `NODE_ENV=production`, `GOOGLE_CLOUD_PROJECT`, `ENVIRONMENT`, and `DEFAULT_CLIENT_URL`; `PORT` is **8080** from the Dockerfile (`EXPOSE 8080` / `ENV PORT=8080`), matching Cloud Run’s default.
 
 ### Environment Setup
 - **Development**: local Postgres, `.env`, schema `public`, `ENVIRONMENT=development`.
@@ -477,10 +522,11 @@ If issues are found in QA:
 ### Test Files Location
 - `src/tests/` - Frontend tests
 - `server/tests/` - Backend tests (if applicable)
+- Conventions: [TESTING_GUIDELINES.md](TESTING_GUIDELINES.md)
 
 ## Known Issues & Limitations
 
-- [List any known issues]
+- **QA `session` table without PRIMARY KEY on `sid`**: If `qa.session` was provisioned with older Initial Setup SQL, login/register can fail with Postgres **`42P10`** (*no unique or exclusion constraint matching the ON CONFLICT specification*) because `connect-pg-simple` upserts on **`sid`**. Apply [server/db/migrations/04_session_primary_key_fix.sql](../server/db/migrations/04_session_primary_key_fix.sql) with `search_path` set to **`qa`** (see file header).
 - [Performance considerations]
 - [Scalability notes]
 

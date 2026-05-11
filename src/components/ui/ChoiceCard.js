@@ -9,6 +9,9 @@ import Button from './Button';
  * - hover lifts to scale-102
  * - active (tap) snaps to scale-105
  * - selected adds a green ring + scale-105 to confirm the choice for ~150ms
+ *
+ * @param {boolean} [compact=false] Use shorter min-heights and smaller titles (text-only layouts).
+ * @param {boolean} [elevatedSurface=false] Lighter card fill for contrast on `bg-sortable-card` shells.
  */
 const ChoiceCard = forwardRef(function ChoiceCard(
   {
@@ -20,21 +23,33 @@ const ChoiceCard = forwardRef(function ChoiceCard(
     onExclude,
     excludeDisabled = false,
     className = '',
+    /** Smaller vertical footprint — e.g. marketing hero pairwise preview */
+    compact = false,
+    elevatedSurface = false,
   },
   ref
 ) {
   const hasImage = Boolean(item?.image_url);
 
+  const shellMin = compact
+    ? 'min-h-28 sm:min-h-32 md:min-h-36'
+    : 'min-h-[min(42vw,160px)] sm:min-h-[280px] md:min-h-[360px]';
+
+  const shellBg = elevatedSurface ? 'bg-sortable-cardRaised' : 'bg-sortable-card';
+
   const shellClasses = [
     'group relative w-full min-w-0 flex flex-col overflow-hidden',
-    'min-h-[min(42vw,160px)] sm:min-h-[280px] md:min-h-[360px]',
-    'bg-sortable-card rounded-2xl sm:rounded-3xl shadow-soft border border-white/5',
+    shellMin,
+    shellBg,
+    'rounded-2xl sm:rounded-3xl shadow-soft border border-white/5',
     className,
   ].join(' ');
 
+  const textOnlyPad = compact ? 'items-center justify-center p-2 sm:p-4' : 'items-center justify-center p-3 sm:p-8';
+
   const pickClasses = [
     'flex flex-1 flex-col w-full min-h-0',
-    hasImage ? 'items-stretch' : 'items-center justify-center p-3 sm:p-8',
+    hasImage ? 'items-stretch' : textOnlyPad,
     'transition-transform duration-200 ease-smooth',
     'hover:scale-102 active:scale-105',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sortable-highlight rounded-b-none rounded-t-2xl sm:rounded-t-3xl',
@@ -42,8 +57,13 @@ const ChoiceCard = forwardRef(function ChoiceCard(
     disabled ? 'pointer-events-none opacity-60' : 'cursor-pointer',
   ].join(' ');
 
-  const titleTextClass =
-    'font-display text-base leading-snug text-sortable-text-primary text-center break-words sm:text-2xl md:text-3xl';
+  const titleTextClass = compact
+    ? 'font-display text-sm leading-snug text-sortable-text-primary text-center break-words sm:text-lg md:text-xl'
+    : 'font-display text-base leading-snug text-sortable-text-primary text-center break-words sm:text-2xl md:text-3xl';
+
+  const imageTitleWrap = compact ? 'sm:px-4 sm:pt-4 sm:pb-2' : 'sm:px-8 sm:pt-8 sm:pb-4';
+
+  const imageBodyWrap = compact ? 'sm:px-4 sm:pb-4' : 'sm:px-8 sm:pb-8';
 
   return (
     <div className={shellClasses}>
@@ -58,10 +78,10 @@ const ChoiceCard = forwardRef(function ChoiceCard(
       >
         {hasImage ? (
           <>
-            <div className="shrink-0 px-3 pt-3 pb-2 text-center sm:px-8 sm:pt-8 sm:pb-4">
+            <div className={`shrink-0 px-3 pt-3 pb-2 text-center ${imageTitleWrap}`}>
               <span className={titleTextClass}>{item?.label}</span>
             </div>
-            <div className="flex min-h-0 flex-1 px-3 pb-3 sm:px-8 sm:pb-8">
+            <div className={`flex min-h-0 flex-1 px-3 pb-3 ${imageBodyWrap}`}>
               <img
                 src={item.image_url}
                 alt=""

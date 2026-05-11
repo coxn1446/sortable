@@ -10,6 +10,30 @@ import EmptyState from '../components/ui/EmptyState';
 import HomeHero from '../components/home/HomeHero';
 import ListPreviewCard from '../components/lists/ListPreviewCard';
 
+function GuestSplashFooter() {
+  return (
+    <footer className="mt-auto border-t border-white/10 bg-sortable-bg/80 px-4 py-8">
+      <nav
+        className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-sortable-text-secondary"
+        aria-label="Legal"
+      >
+        <Link
+          to="/privacy"
+          className="font-medium text-sortable-highlight transition-colors hover:underline hover:text-sortable-text-primary"
+        >
+          Privacy Policy
+        </Link>
+        <Link
+          to="/terms"
+          className="font-medium text-sortable-highlight transition-colors hover:underline hover:text-sortable-text-primary"
+        >
+          Terms &amp; Conditions
+        </Link>
+      </nav>
+    </footer>
+  );
+}
+
 export default function Home() {
   const dispatch = useDispatch();
   const isAuthenticated = useSelector(selectIsAuthenticated);
@@ -31,13 +55,9 @@ export default function Home() {
     };
   }, [dispatch]);
 
-  return (
-    <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-col gap-10 px-4 py-8 sm:gap-12 sm:py-12">
-      <HomeHero isAuthenticated={isAuthenticated} />
-
-      {error ? (
-        <p className="text-sm text-sortable-danger">{error}</p>
-      ) : null}
+  const discoverSection = (
+    <>
+      {error ? <p className="text-sm text-sortable-danger">{error}</p> : null}
 
       <section className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-3">
@@ -69,6 +89,25 @@ export default function Home() {
           </div>
         )}
       </section>
+    </>
+  );
+
+  if (isAuthenticated) {
+    return (
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-col gap-10 px-4 py-8 sm:gap-12 sm:py-12">
+        <HomeHero isAuthenticated />
+        {discoverSection}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-full flex-col">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 sm:gap-10 sm:py-10">
+        <HomeHero isAuthenticated={false} splash />
+        {discoverSection}
+      </div>
+      <GuestSplashFooter />
     </div>
   );
 }

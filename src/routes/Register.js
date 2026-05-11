@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import RegisterForm from '../components/Auth/RegisterForm';
 import Card from '../components/ui/Card';
+import GoogleButton from '../components/Auth/GoogleButton';
+import AppleButton from '../components/Auth/AppleButton';
 
 export default function Register() {
   return (
@@ -14,7 +16,16 @@ export default function Register() {
               Get started with Sortable.
             </p>
           </header>
-          <RegisterForm />
+          <div className="flex flex-col gap-4">
+            <RegisterForm />
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-sortable-text-secondary">
+              <div className="h-px flex-1 bg-white/10" />
+              <span>or</span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+            <GoogleButton mode="signUp" />
+            <AppleButton mode="signUp" />
+          </div>
           <p className="text-sm text-sortable-text-secondary">
             Already have an account?{' '}
             <Link to="/login" className="font-semibold text-sortable-highlight hover:underline">

@@ -6,6 +6,9 @@ const comparisonService = require('../services/comparisonService');
 const rankingService = require('../services/rankingService');
 const comparisonQueries = require('../queries/comparisonQueries');
 const { requireAuth } = require('../middleware/requireAuth');
+const { requirePolicyConsent } = require('../middleware/requirePolicyConsent');
+
+const authWithConsent = [requireAuth, requirePolicyConsent];
 
 function userId(req) {
   return req.user?.user_id || null;
@@ -17,7 +20,7 @@ function handleServiceError(error, next) {
 
 /* ---------- list collection ---------- */
 
-router.post('/', requireAuth, async (req, res, next) => {
+router.post('/', ...authWithConsent, async (req, res, next) => {
   try {
     const { title, description, items, is_public, exclude_choice_label } = req.body || {};
     const result = await listService.createListWithItems({
@@ -34,7 +37,7 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 });
 
-router.get('/me', requireAuth, async (req, res, next) => {
+router.get('/me', ...authWithConsent, async (req, res, next) => {
   try {
     const lists = await listService.getMyLists(userId(req));
     res.json({ lists });
@@ -52,7 +55,7 @@ router.get('/discover', async (req, res, next) => {
   }
 });
 
-router.get('/activity', requireAuth, async (req, res, next) => {
+router.get('/activity', ...authWithConsent, async (req, res, next) => {
   try {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
     const offset = Math.max(0, Math.floor(Number(req.query.offset) || 0));
@@ -98,7 +101,7 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
-router.patch('/:id', requireAuth, async (req, res, next) => {
+router.patch('/:id', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const list = await listService.patchList({
@@ -112,7 +115,7 @@ router.patch('/:id', requireAuth, async (req, res, next) => {
   }
 });
 
-router.delete('/:id', requireAuth, async (req, res, next) => {
+router.delete('/:id', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     await listService.destroyList({ listId: id, userId: userId(req) });
@@ -124,7 +127,7 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
 
 /* ---------- items ---------- */
 
-router.post('/:id/items', requireAuth, async (req, res, next) => {
+router.post('/:id/items', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const item = await listService.addItem({
@@ -139,7 +142,7 @@ router.post('/:id/items', requireAuth, async (req, res, next) => {
   }
 });
 
-router.patch('/:id/items/:itemId', requireAuth, async (req, res, next) => {
+router.patch('/:id/items/:itemId', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const itemId = Number(req.params.itemId);
@@ -156,7 +159,7 @@ router.patch('/:id/items/:itemId', requireAuth, async (req, res, next) => {
   }
 });
 
-router.delete('/:id/items/:itemId', requireAuth, async (req, res, next) => {
+router.delete('/:id/items/:itemId', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const itemId = Number(req.params.itemId);
@@ -169,7 +172,7 @@ router.delete('/:id/items/:itemId', requireAuth, async (req, res, next) => {
 
 /* ---------- comparisons / ranking ---------- */
 
-router.get('/:id/next-pair', requireAuth, async (req, res, next) => {
+router.get('/:id/next-pair', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     // Verify viewer has access (will throw 401/403 otherwise).
@@ -188,7 +191,7 @@ router.get('/:id/next-pair', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/:id/comparisons', requireAuth, async (req, res, next) => {
+router.post('/:id/comparisons', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const winnerItemId = Number(req.body?.winner_id);
@@ -211,7 +214,7 @@ router.post('/:id/comparisons', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/:id/my-ranking/reset', requireAuth, async (req, res, next) => {
+router.post('/:id/my-ranking/reset', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     await comparisonService.resetMyRanking({
@@ -224,7 +227,7 @@ router.post('/:id/my-ranking/reset', requireAuth, async (req, res, next) => {
   }
 });
 
-router.post('/:id/my-ranking/exclude', requireAuth, async (req, res, next) => {
+router.post('/:id/my-ranking/exclude', ...authWithConsent, async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const itemId = Number(req.body?.item_id);

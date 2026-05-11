@@ -58,6 +58,32 @@ describe('ChoiceCard', () => {
     expect(container.querySelector('.bg-sortable-gradient')).toBeNull();
   });
 
+  test('compact mode renders centered label without exclude row', async () => {
+    const user = userEvent.setup();
+    const onSelect = jest.fn();
+
+    render(
+      <ChoiceCard compact item={{ item_id: 1, label: 'Compact tile' }} onSelect={onSelect} />
+    );
+
+    await user.click(screen.getByRole('button', { name: /choose compact tile/i }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+  });
+
+  test('elevatedSurface applies raised card background', () => {
+    const { container } = render(
+      <ChoiceCard
+        compact
+        elevatedSurface
+        item={{ item_id: 1, label: 'Up' }}
+        onSelect={() => {}}
+      />
+    );
+
+    expect(container.firstChild).toHaveClass('bg-sortable-cardRaised');
+  });
+
   test('with photo shows title and image below', () => {
     const { container } = render(
       <ChoiceCard

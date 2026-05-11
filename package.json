@@ -11,9 +11,12 @@
     "server:dev": "nodemon --config nodemon.json serverIndex.js",
     "build": "vite build",
     "preview": "vite preview",
+    "deploy:qa": "gcloud run deploy sortable-qa --source . --region=us-central1 --update-env-vars=NODE_ENV=production,ENVIRONMENT=qa,DEFAULT_CLIENT_URL=https://qa.sortable.net",
+    "deploy:prod": "gcloud run deploy sortable --source . --region=us-central1 --update-env-vars=NODE_ENV=production,ENVIRONMENT=production,DEFAULT_CLIENT_URL=https://sortable.net",
     "test": "jest",
     "s": "npx cap sync ios",
-    "check-secrets": "node scripts/check-secrets.js"
+    "check-secrets": "node scripts/check-secrets.js",
+    "ngrok": "ngrok http http://127.0.0.1:3000"
   },
   "dependencies": {
     "@capacitor/app": "^6.0.0",
