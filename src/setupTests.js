@@ -35,3 +35,10 @@ jest.mock('@capacitor/core', () => ({
     getPlatform: () => 'web',
   },
 }));
+
+jest.mock('@capacitor/browser', () => ({
+  Browser: {
+    open: jest.fn(() => Promise.resolve()),
+    close: jest.fn(() => Promise.resolve()),
+  },
+}));

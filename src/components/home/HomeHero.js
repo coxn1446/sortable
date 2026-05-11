@@ -65,9 +65,6 @@ export default function HomeHero({ isAuthenticated, splash = false }) {
     <section
       className={`flex flex-col ${stackGap} rounded-3xl border border-white/5 bg-sortable-card p-6 shadow-soft ${layout}`}
     >
-      <span className="text-xs uppercase tracking-[0.2em] text-sortable-highlight">
-        Clarity through choice
-      </span>
       <h1 className={titleClass}>Make hard decisions feel easy.</h1>
       <p className={leadClass}>
         Sortable turns big lists of options into clear rankings, one this-or-that decision at a time.

@@ -1,5 +1,12 @@
 import React from 'react';
-import { appleLoginUrl } from '../../helpers/authHelpers';
+import toast from 'react-hot-toast';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import {
+  appleLoginUrl,
+  fetchNativeAppleLinkBootstrapUrl,
+  openSystemBrowserForOAuthStart,
+} from '../../helpers/authHelpers';
 
 const MODE_LABEL = {
   continue: 'Continue with Apple',
@@ -19,10 +26,34 @@ function AppleLogoMark({ className }) {
 }
 
 export default function AppleButton({ mode = 'continue', linkAccount = false, className = '' }) {
-  const label = MODE_LABEL[mode] || MODE_LABEL.continue;
+  const label = linkAccount
+    ? 'Link Apple account'
+    : MODE_LABEL[mode] || MODE_LABEL.continue;
+  const href = appleLoginUrl({ linkAccount });
+
+  async function onClick(e) {
+    if (linkAccount && Capacitor.isNativePlatform()) {
+      e.preventDefault();
+      try {
+        const url = await fetchNativeAppleLinkBootstrapUrl();
+        await Browser.open({ url });
+      } catch (err) {
+        console.error('[oauth-native-client] Apple link bootstrap failed', { message: err?.message });
+        toast.error(err?.message || 'Could not open Apple link');
+      }
+      return;
+    }
+    if (!Capacitor.isNativePlatform()) return;
+    e.preventDefault();
+    openSystemBrowserForOAuthStart(href, { linkAccount }).catch((e) => {
+      console.error('[oauth-native-client] Browser.open failed', { message: e?.message });
+    });
+  }
+
   return (
     <a
-      href={appleLoginUrl({ linkAccount })}
+      href={href}
+      onClick={onClick}
       className={`flex min-h-10 items-center justify-center gap-3 rounded-2xl bg-sortable-oauth-appleButtonBg px-4 py-2.5 text-sm font-medium text-sortable-oauth-appleButtonText transition-transform duration-200 ease-smooth hover:scale-102 hover:opacity-95 ${className}`}
     >
       <AppleLogoMark className="h-5 w-5 shrink-0" />

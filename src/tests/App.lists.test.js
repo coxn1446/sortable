@@ -89,7 +89,9 @@ describe('App - lists home', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Clarity through choice/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Sortable turns big lists of options into clear rankings/i)
+      ).toBeInTheDocument();
     });
 
     expect(screen.getByRole('heading', { name: /Make hard decisions feel easy/i })).toBeInTheDocument();

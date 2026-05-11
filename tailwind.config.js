@@ -12,6 +12,8 @@ module.exports = {
             start: '#6366F1',
             end: '#3B82F6',
           },
+          /** Native launch + static HTML splash plate — sampled from `resources/icon.png` edges (~#504AED). */
+          splash: '#504AED',
           bg: '#0F172A',
           surface: '#111827',
           card: '#1F2933',
@@ -50,6 +52,13 @@ module.exports = {
       boxShadow: {
         soft: '0 10px 30px rgba(0,0,0,0.25)',
         glow: '0 0 20px rgba(99,102,241,0.35)',
+      },
+      maxHeight: {
+        'nav-dropdown': 'min(70dvh, calc(100dvh - 4rem))',
+      },
+      maxWidth: {
+        /** Login / register primary + OAuth buttons (~half of card width). */
+        'auth-cta': '50%',
       },
       backgroundImage: {
         'sortable-gradient': 'linear-gradient(135deg, #6366F1 0%, #3B82F6 100%)',

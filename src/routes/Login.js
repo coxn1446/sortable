@@ -6,7 +6,7 @@ import Card from '../components/ui/Card';
 export default function Login() {
   return (
     <div className="flex min-h-full w-full flex-col items-center justify-center px-4 py-12">
-      <div className="mx-auto w-full max-w-md">
+      <div className="mx-auto w-full max-w-2xl">
         <Card className="flex flex-col gap-5 p-6 sm:p-8">
           <header>
             <h1 className="font-display text-2xl font-semibold">Sign in</h1>

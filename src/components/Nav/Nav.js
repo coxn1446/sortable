@@ -103,27 +103,38 @@ export default function Nav() {
     </div>
   );
 
+  const mobileTopInsetSpacer = (
+    <div
+      aria-hidden
+      className="shrink-0 lg:hidden"
+      style={{ height: 'calc(env(safe-area-inset-top, 0px) + 3.5rem)' }}
+    />
+  );
+
   if (!isAuthenticated) {
     return (
-      <header className="relative z-50 w-full shrink-0 border-b border-white/10 bg-sortable-bg/95 backdrop-blur">
-        <div className="flex items-center px-4 py-3">
-          <NavLink
-            to="/"
-            className="flex min-w-0 items-center gap-2 rounded-xl outline-none ring-sortable-highlight transition-colors hover:bg-white/5 focus-visible:ring-2"
-            aria-label="Sortable home"
-          >
-            <SortableBrandMark />
-          </NavLink>
-        </div>
-      </header>
+      <>
+        <header className="safe-area-pt fixed top-0 left-0 right-0 z-50 w-full border-b border-white/10 bg-sortable-bg/95 backdrop-blur lg:static lg:z-auto">
+          <div className="flex items-center px-4 py-3">
+            <NavLink
+              to="/"
+              className="flex min-w-0 items-center gap-2 rounded-xl outline-none ring-sortable-highlight transition-colors hover:bg-white/5 focus-visible:ring-2"
+              aria-label="Sortable home"
+            >
+              <SortableBrandMark />
+            </NavLink>
+          </div>
+        </header>
+        {mobileTopInsetSpacer}
+      </>
     );
   }
 
   return (
     <>
-      {/* Mobile: top bar + dropdown */}
-      <div className="relative z-50 shrink-0 lg:hidden">
-        <div className="flex items-center border-b border-white/10 bg-sortable-bg/95 backdrop-blur">
+      {/* Mobile: top bar + dropdown (fixed so WKWebView/keyboard does not shift it) */}
+      <div className="safe-area-pt fixed top-0 left-0 right-0 z-50 lg:hidden">
+        <div className="flex w-full max-w-full items-center border-b border-white/10 bg-sortable-bg/95 backdrop-blur">
           <button
             type="button"
             className="flex min-w-0 items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sortable-highlight"
@@ -184,7 +195,7 @@ export default function Nav() {
             />
             <div
               id="sortable-mobile-nav"
-              className="absolute left-0 right-0 top-full z-50 max-h-[min(70vh,calc(100vh-4rem))] overflow-y-auto border-b border-white/10 bg-sortable-bg shadow-soft"
+              className="absolute left-0 right-0 top-full z-50 max-h-nav-dropdown w-full max-w-full overflow-y-auto border-b border-white/10 bg-sortable-bg shadow-soft"
               role="menu"
             >
               <MainNavLinks onNavigate={closeMobile} />
@@ -194,8 +205,10 @@ export default function Nav() {
         ) : null}
       </div>
 
+      {mobileTopInsetSpacer}
+
       {/* Desktop: left sidebar */}
-      <aside className="hidden min-h-0 w-56 shrink-0 flex-col border-r border-white/10 bg-sortable-bg lg:flex lg:h-screen">
+      <aside className="safe-area-pt hidden min-h-0 w-56 max-w-full shrink-0 flex-col border-r border-white/10 bg-sortable-bg lg:flex">
         <div className="shrink-0 border-b border-white/10 px-4 py-4">
           <NavLink
             to="/"

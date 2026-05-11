@@ -26,6 +26,8 @@ describe('Register route', () => {
 
     const outer = container.firstChild;
     expect(outer).toHaveClass('flex', 'min-h-full', 'w-full', 'flex-col', 'items-center', 'justify-center');
+    const inner = outer.querySelector('.max-w-2xl');
+    expect(inner).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Create an account' })).toBeInTheDocument();
     expect(screen.getByTestId('mock-register-form')).toBeInTheDocument();
   });

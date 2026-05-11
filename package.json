@@ -14,12 +14,18 @@
     "deploy:qa": "gcloud run deploy sortable-qa --source . --region=us-central1 --update-env-vars=NODE_ENV=production,ENVIRONMENT=qa,DEFAULT_CLIENT_URL=https://qa.sortable.net",
     "deploy:prod": "gcloud run deploy sortable --source . --region=us-central1 --update-env-vars=NODE_ENV=production,ENVIRONMENT=production,DEFAULT_CLIENT_URL=https://sortable.net",
     "test": "jest",
-    "s": "npx cap sync ios",
+    "s:prod": "CAP_APP_ENV=prod npx cap sync ios",
+    "s:qa": "CAP_APP_ENV=qa npx cap sync ios",
+    "s:dev": "CAP_APP_ENV=dev npx cap sync ios",
+    "cap:assets": "capacitor-assets generate --ios --assetPath resources --iconBackgroundColor '#504AED' --iconBackgroundColorDark '#0F172A' --splashBackgroundColor '#504AED' --splashBackgroundColorDark '#0F172A' --logoSplashScale 0.14 && node scripts/sync-launch-mark.js",
     "check-secrets": "node scripts/check-secrets.js",
-    "ngrok": "ngrok http http://127.0.0.1:3000"
+    "ngrok": "node scripts/ngrok-dev.js",
+    "cert": "node scripts/generate-cert-selfsigned.js",
+    "generate-cert:selfsigned": "node scripts/generate-cert-selfsigned.js"
   },
   "dependencies": {
     "@capacitor/app": "^6.0.0",
+    "@capacitor/browser": "^6.0.6",
     "@capacitor/core": "^6.0.0",
     "@capacitor/device": "^6.0.0",
     "@capacitor/haptics": "^6.0.0",
@@ -61,6 +67,7 @@
   "devDependencies": {
     "@babel/preset-env": "^7.26.0",
     "@babel/preset-react": "^7.26.0",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.2.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -71,6 +78,8 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "nodemon": "^3.1.9",
+    "selfsigned": "^2.4.1",
+    "typescript": "^6.0.3",
     "vite": "^5.4.11"
   },
   "browserslist": {

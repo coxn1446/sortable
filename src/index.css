@@ -11,10 +11,19 @@
   color-scheme: dark;
 }
 
-html,
+html {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
 body,
 #root {
-  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 body {
@@ -27,6 +36,63 @@ body {
     Cantarell, 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-width: 0;
+}
+
+/*
+ * Capacitor WKWebView: keep html/body/#root on one height chain. Global 100dvh here fights
+ * window.innerHeight / visualViewport on keyboard focus (docEl clientHeight stuck vs vv).
+ */
+html.capacitor-native {
+  min-height: 0;
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
+html.capacitor-native body {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+html.capacitor-native #root {
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Capacitor iOS / WKWebView: inputs below 16px trigger focus zoom */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+textarea,
+select {
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Safe-area insets (notch, home indicator) — use with Tailwind layout */
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/*
+ * react-hot-toast Toaster is portaled to #sortable-toast-host (sibling of body).
+ * On Capacitor, respect safe-area on top and sides so top-center toasts clear notch / home indicator.
+ */
+html.capacitor-native [data-rht-toaster] {
+  top: max(1rem, env(safe-area-inset-top, 0px)) !important;
+  left: max(1rem, env(safe-area-inset-left, 0px)) !important;
+  right: max(1rem, env(safe-area-inset-right, 0px)) !important;
 }
 
 /* Hide the default focus ring on click but keep it for keyboard. */

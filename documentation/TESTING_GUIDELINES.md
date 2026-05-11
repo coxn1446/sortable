@@ -4,7 +4,7 @@
 
 ## Last Updated
 
-2026-05-08
+2026-05-11
 
 ## Running tests
 
@@ -38,7 +38,7 @@ Jest runs two **projects**:
 ## Server tests (`server/tests/`)
 
 - Do **not** require a live database unless an integration suite is explicitly added.
-- **Mock the query layer** or other I/O modules (`jest.mock('../queries/...')` or `jest.mock('../queries')`) following [`server/tests/listService.test.js`](../server/tests/listService.test.js).
+- **Mock the query layer** or other I/O modules (`jest.mock('../queries/...')` or `jest.mock('../queries')`) following [`server/tests/listService.test.js`](../server/tests/listService.test.js). Pure helpers (no I/O) can be tested directly—see [`server/tests/capacitorDevServerUrl.test.js`](../server/tests/capacitorDevServerUrl.test.js) and [`server/tests/capacitorFlavor.test.js`](../server/tests/capacitorFlavor.test.js).
 - **Clear mocks** in `beforeEach` (`jest.clearAllMocks()`).
 - Test **happy path**, **validation failures**, and **error codes** (e.g. `USERNAME_TAKEN`) where services expose them.
 

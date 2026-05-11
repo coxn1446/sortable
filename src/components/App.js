@@ -2,12 +2,14 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
+import { Browser } from '@capacitor/browser';
 
 import { listRoutePath } from '../helpers/listRoutePaths';
 import { fetchListBySlug } from '../helpers/listHelpers';
-import { NativeProvider } from '../utils/NativeContext';
+import { NativeProvider, useNative } from '../utils/NativeContext';
 import { useAuth } from '../hooks/useAuth';
-import { acceptUpdatedPolicies, logout } from '../helpers/authHelpers';
+import { acceptUpdatedPolicies, completeNativeOAuthSessionHandoff, fetchCurrentUser, logout } from '../helpers/authHelpers';
+import { pathFromSortableAppUrl, stripOAuthHandoffFromInternalPath } from '../utils/sortableAppUrl';
 import {
   clearUser,
   selectAuthLoading,
@@ -142,8 +144,93 @@ function PolicyConsentGate() {
 
 function AppShell() {
   useAuth();
+  const { isNative } = useNative();
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (!isNative) return undefined;
+
+    let removed = false;
+    let handle = null;
+
+    (async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        const h = await App.addListener('appUrlOpen', async ({ url }) => {
+          console.log('[oauth-native-client] appUrlOpen received', { url: String(url).slice(0, 500) });
+          const path = pathFromSortableAppUrl(url);
+          if (!path) {
+            console.log('[oauth-native-client] appUrlOpen: URL is not a Sortable deep link; ignoring', {
+              url: String(url).slice(0, 200),
+            });
+            return;
+          }
+
+          let handoffToken = null;
+          try {
+            handoffToken = new URL(url).searchParams.get('oauth_handoff');
+          } catch {
+            /* ignore */
+          }
+
+          if (handoffToken) {
+            try {
+              const user = await completeNativeOAuthSessionHandoff(handoffToken);
+              console.log('[oauth-native-client] appUrlOpen: native session handoff', {
+                authenticated: Boolean(user),
+              });
+              if (user) dispatch(setUser(user));
+              else dispatch(clearUser());
+            } catch (e) {
+              console.log('[oauth-native-client] appUrlOpen: session handoff failed', {
+                message: e?.message,
+              });
+              dispatch(clearUser());
+            }
+            try {
+              await Browser.close();
+            } catch {
+              /* Browser may be unavailable in tests / non-native */
+            }
+            const cleanPath = stripOAuthHandoffFromInternalPath(path);
+            navigate(cleanPath, { replace: true });
+            return;
+          }
+
+          console.log('[oauth-native-client] appUrlOpen: navigating', { path: path.slice(0, 200) });
+          navigate(path, { replace: true });
+          try {
+            const user = await fetchCurrentUser();
+            console.log('[oauth-native-client] appUrlOpen: session refresh after navigate', {
+              authenticated: Boolean(user),
+            });
+            if (user) dispatch(setUser(user));
+            else dispatch(clearUser());
+          } catch (e) {
+            console.log('[oauth-native-client] appUrlOpen: fetchCurrentUser failed after navigate', {
+              message: e?.message,
+            });
+            dispatch(clearUser());
+          }
+        });
+        if (removed) {
+          h.remove();
+        } else {
+          handle = h;
+        }
+      } catch {
+        /* @capacitor/app unavailable outside native builds */
+      }
+    })();
+
+    return () => {
+      removed = true;
+      if (handle) handle.remove();
+    };
+  }, [dispatch, isNative, navigate]);
 
   useEffect(() => {
     if (searchParams.get('signed_in') !== '1') {
@@ -164,7 +251,8 @@ function AppShell() {
   return (
     <div
       className={[
-        'flex h-screen min-h-0 flex-col bg-sortable-bg text-sortable-text-primary',
+        'flex min-h-0 w-full max-w-full flex-col bg-sortable-bg text-sortable-text-primary',
+        isNative ? 'flex-1' : 'h-dvh',
         isAuthenticated ? 'lg:flex-row' : '',
       ]
         .filter(Boolean)
@@ -172,7 +260,7 @@ function AppShell() {
     >
       <Nav />
       <PolicyConsentGate />
-      <main className="min-h-0 flex-1 overflow-y-auto">
+      <main className="safe-area-pb min-h-0 w-full min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Home />} />

@@ -26,6 +26,7 @@ describe('Login route', () => {
 
     const outer = container.firstChild;
     expect(outer).toHaveClass('flex', 'min-h-full', 'w-full', 'flex-col', 'items-center', 'justify-center');
+    expect(outer.querySelector('.max-w-2xl')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.getByTestId('mock-login-form')).toBeInTheDocument();
   });

@@ -159,7 +159,8 @@ export default function LoginSettingsModal({ open, onClose, user }) {
             </div>
           ) : (
             <div className="mt-3">
-              <GoogleButton mode="signIn" linkAccount className="w-full" />
+              {/* Web: normal link href (session cookie). Native: button uses bootstrap POST + system browser (Google disallows OAuth in WKWebView). */}
+              <GoogleButton linkAccount className="w-full" />
             </div>
           )}
         </div>
@@ -182,7 +183,8 @@ export default function LoginSettingsModal({ open, onClose, user }) {
             </div>
           ) : (
             <div className="mt-3">
-              <AppleButton mode="signIn" linkAccount className="w-full" />
+              {/* Web: session cookie; native: bootstrap + system browser (same as Google). */}
+              <AppleButton linkAccount className="w-full" />
             </div>
           )}
         </div>

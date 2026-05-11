@@ -16,6 +16,8 @@ import AppleButton from './AppleButton';
 const inputClass =
   'rounded-xl border border-white/10 bg-sortable-surface px-3 py-2 text-sm text-sortable-text-primary placeholder:text-sortable-text-secondary focus:border-sortable-highlight focus:outline-none focus:ring-1 focus:ring-sortable-highlight';
 
+const authCtaClass = 'w-full md:max-w-auth-cta md:self-center';
+
 const LOGIN_OAUTH_ERROR_MESSAGES = {
   apple: 'Apple sign-in did not complete. Please try again.',
   google: 'Google sign-in did not complete. Please try again.',
@@ -165,10 +167,10 @@ export default function LoginForm() {
             className={inputClass}
           />
         </label>
-        <Button type="submit" disabled={submitting} size="lg">
+        <Button type="submit" disabled={submitting} size="lg" className={authCtaClass}>
           {submitting ? 'Linking…' : 'Link Google and sign in'}
         </Button>
-        <Button type="button" variant="secondary" size="lg" onClick={onCancelGoogleLink}>
+        <Button type="button" variant="secondary" size="lg" onClick={onCancelGoogleLink} className={authCtaClass}>
           Cancel
         </Button>
       </form>
@@ -212,7 +214,7 @@ export default function LoginForm() {
             className={inputClass}
           />
         </label>
-        <Button type="submit" disabled={submitting} size="lg">
+        <Button type="submit" disabled={submitting} size="lg" className={authCtaClass}>
           {submitting ? 'Signing in' : 'Sign in'}
         </Button>
         <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-sortable-text-secondary">
@@ -220,8 +222,8 @@ export default function LoginForm() {
           <span>or</span>
           <div className="h-px flex-1 bg-white/10" />
         </div>
-        <GoogleButton mode="signIn" />
-        <AppleButton mode="signIn" />
+        <GoogleButton mode="signIn" className={authCtaClass} />
+        <AppleButton mode="signIn" className={authCtaClass} />
       </form>
     </>
   );

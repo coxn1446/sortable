@@ -1,21 +1,24 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getCapacitorFlavorConfig } = require('./scripts/capacitor-env');
+
+const { appId, appName, serverUrl, cleartext, allowNavigationHosts } = getCapacitorFlavorConfig();
+
 const config: CapacitorConfig = {
-  appId: process.env.NODE_ENV === 'production' ? 'com.sortable.app' : 'com.sortable.dev',
-  appName: 'Sortable',
+  appId,
+  appName,
   webDir: 'build',
   server: {
-    url:
-      process.env.NODE_ENV === 'production'
-        ? 'https://sortable.net'
-        : 'http://localhost:3000',
-    cleartext: process.env.NODE_ENV !== 'production',
+    url: serverUrl,
+    cleartext,
     hostname: 'sortable.net',
-    allowNavigation: ['sortable.net', 'qa.sortable.net', 'www.sortable.net'],
+    allowNavigation: allowNavigationHosts,
   },
   plugins: {
     Keyboard: {
-      resize: 'body',
+      // 'body' shrinks the layout and moves the top bar when the keyboard opens on iOS.
+      resize: 'none',
       style: 'dark',
       resizeOnFullScreen: true,
     },
@@ -25,7 +28,8 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 1200,
       launchAutoHide: false,
-      backgroundColor: '#0F172A',
+      // Match `sortable.splash`, LaunchScreen.storyboard, and `public/splash-shell.css`.
+      backgroundColor: '#504AED',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
@@ -43,7 +47,7 @@ const config: CapacitorConfig = {
     contentInset: 'automatic',
     limitsNavigationsToAppBoundDomains: false,
     scheme: 'Sortable',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#504AED',
   },
 };
 

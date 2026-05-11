@@ -35,10 +35,28 @@ export const NativeProvider = ({ children }) => {
         setDeviceInfo(info);
         dispatch(setNativeInfo({ isNative: true, platform: info.platform, deviceInfo: info }));
 
-        const { Keyboard } = await import('@capacitor/keyboard');
+        const { Keyboard, KeyboardResize } = await import('@capacitor/keyboard');
+        if (info.platform === 'ios') {
+          try {
+            await Keyboard.setResizeMode({ mode: KeyboardResize.None });
+            await Keyboard.getResizeMode();
+          } catch {
+            /* plugin or platform mismatch */
+          }
+          try {
+            await Keyboard.setScroll({ isDisabled: true });
+          } catch {
+            /* plugin or platform mismatch */
+          }
+        }
+
         keyboardListeners = await Promise.all([
-          Keyboard.addListener('keyboardWillShow', () => dispatch(setKeyboardVisible(true))),
-          Keyboard.addListener('keyboardWillHide', () => dispatch(setKeyboardVisible(false))),
+          Keyboard.addListener('keyboardWillShow', () => {
+            dispatch(setKeyboardVisible(true));
+          }),
+          Keyboard.addListener('keyboardWillHide', () => {
+            dispatch(setKeyboardVisible(false));
+          }),
         ]);
 
         // Match the dark theme: light text on a dark status bar.

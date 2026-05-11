@@ -1,6 +1,8 @@
 const net = require('net');
 const { spawn } = require('child_process');
 
+require('dotenv').config({ quiet: true });
+
 const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 const children = new Set();
 

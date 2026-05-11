@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const compression = require('compression');
 const pgSession = require('connect-pg-simple')(session);
 const db = require('../db');
+const { getSessionCookieSameSiteAndSecure } = require('../utils/sessionCookieSettings');
 
 module.exports = async function (app) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -53,7 +54,12 @@ module.exports = async function (app) {
   // Apple Sign In posts back cross-site (form_post). SameSite=Lax drops the session cookie on
   // that POST, so profile "link Apple" lost oauthProviderLinkIntent and created a new user.
   // Google uses a GET callback, so Lax was fine there. None + Secure restores the session on Apple.
-  const sessionSameSite = isProduction ? 'none' : 'lax';
+  // Public HTTPS dev (ngrok): DEFAULT_CLIENT_URL is https while NODE_ENV may still be development —
+  // use the same cookie rules so Apple callbacks keep the session.
+  const { sameSite: sessionSameSite, secure: sessionSecure } = getSessionCookieSameSiteAndSecure({
+    isProduction,
+    defaultClientUrl: process.env.DEFAULT_CLIENT_URL,
+  });
 
   const sessionConfig = {
     store: new pgSession(pgStoreOptions),
@@ -63,7 +69,7 @@ module.exports = async function (app) {
     cookie: {
       maxAge: 7 * 24 * 60 * 60 * 1000,
       httpOnly: true,
-      secure: isProduction,
+      secure: sessionSecure,
       sameSite: sessionSameSite,
     },
     name: 'sortable.sid',

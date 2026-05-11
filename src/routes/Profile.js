@@ -26,6 +26,8 @@ const PROFILE_OAUTH_ERRORS = {
   profile_link_apple_failed: 'Could not link Apple. Try again.',
   apple: 'Apple sign-in did not complete.',
   google: 'Google sign-in did not complete.',
+  native_link_invalid: 'Could not start link from the app. Try again from Log in Settings.',
+  native_link_expired: 'That link sign-in expired. Try again from Log in Settings.',
 };
 
 export default function Profile() {

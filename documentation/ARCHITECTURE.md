@@ -3,7 +3,7 @@
 > **IMPORTANT**: Keep this file updated as features are added or architecture changes.
 
 ## Last Updated
-2026-05-09 (Profile: centered avatar column on desktop; Google/Apple sections + unlink rules; `PATCH /api/users/me/password`, `POST /api/users/me/unlink-oauth`; public user `has_password` via SQL `(password IS NOT NULL)`)
+2026-05-11 (**OAuth dev tunnel + native return**) — Public HTTPS dev (e.g. **ngrok**): set **`DEFAULT_CLIENT_URL`** and **`CAP_DEV_URL` / `CAP_SERVER_URL_DEV` / `CAPACITOR_DEV_SERVER_URL`** to the **same** tunnel origin so Passport **`callbackURL`**, session cookies, and the Capacitor WebView share one host. Run **`npm run dev`** (Vite **3000** + API **8080**), then tunnel **3000** (see **`npm run ngrok`**). Regenerate provider redirect/return URLs for that origin. When **`DEFAULT_CLIENT_URL`** is an **`https:`** URL but **`NODE_ENV`** is not production, the API uses **`SameSite=None` + `Secure`** session cookies so **Apple Sign In** `form_post` callbacks keep the session. Optional **`CAP_ALLOW_NAVIGATION_HOSTS`**: comma-separated extra hostnames merged into Capacitor **`server.allowNavigation`** (dev flavor also adds the hostname of **`CAP_DEV_URL`** automatically). Native OAuth completion can redirect via **`Sortable://sortable.net…`** when the client starts the flow with **`return_native=1`** (see **OAuth (Google & Apple)**).
 
 ## Table of Contents
 - [Overview](#overview)
@@ -49,7 +49,7 @@ The same codebase deploys to **development**, **QA** (`qa.sortable.net`, Postgre
 Original app-shell template reference: `App Shell Documentation/APP_SHELL_PROMPT.md` (sibling repo/folder).
 
 ## Tech Stack Summary
-- Frontend: React 18, Redux Toolkit, Tailwind CSS v4 (design tokens in `tailwind.config.js`), Ionic React (base styles), Capacitor 6 (iOS), Vite 5
+- Frontend: React 18, Redux Toolkit, Tailwind CSS v4 (design tokens in `tailwind.config.js`), Ionic React (base styles), Capacitor 6 (iOS), Vite 5, TypeScript (dev only; Capacitor CLI reads `capacitor.config.ts`)
 - Backend: Node.js LTS, Express 4, Passport (local + Google + Apple), `express-session` + `connect-pg-simple`
 - Ranking: pure JS adaptive binary-insertion sort (`server/services/ranking/adaptiveSort.js`) + Elo updates (`server/services/ranking/elo.js`)
 - Database: PostgreSQL (`pg`), two logical schemas: `public` (prod/dev default) and `qa` (when `ENVIRONMENT` is `qa`, case-insensitive)
@@ -78,7 +78,7 @@ App (NativeProvider)
 │   ├── CreateList — shared `CreateListForm`; title, items, optional exclude button label, public toggle
 │   ├── ListPage — `/list/:id` — sub-nav Choose / Results / Settings (owner); Choose = pairwise compare; Results = rankings; Settings = owner edits title/description, add/remove items, option photo URLs (`image_url`), delete list
 │   ├── Discover, Activity (paginated + search), Profile (account + lists teaser + activity preview), ListsPage (`/lists`), Login, Register, NotFound
-└── Toaster
+└── Toaster (`react-hot-toast`, **`top-center`**) — portaled to `#sortable-toast-host` on `<html>` (see `src/index.js` / `ensureToastPortalHost.js`) so fixed toasts are not clipped by the Capacitor `#root` overflow chain; iOS safe-area offsets in `index.css`
 ```
 
 Shared UI primitives live under `src/components/ui/` (`Button`, `Card`, `ChoiceCard`, `RankedList`, `EmptyState`, `SortableLogoLink`, `SortableSelect`, `SortableNativeSelect`, `ProfileAvatar`).
@@ -111,6 +111,8 @@ Shared UI primitives live under `src/components/ui/` (`Button`, `Card`, `ChoiceC
 - **Usage**: How components access Firebase services
 
 ### Configuration Files
+- **Capacitor** (`capacitor.config.ts`): Loaded by the Capacitor CLI (requires **`typescript`** as a devDependency). **`CAP_APP_ENV`** selects the native bundle, **`appName`** (home screen / **`CFBundleDisplayName`**: **`Sortable Dev`**, **`Sortable QA`**, **`Sortable Prod`**), and **`server.url`** (**`npm run s:dev`**, **`s:qa`**, or **`s:prod`**). Dev URL from **`CAP_DEV_URL`** / **`CAP_SERVER_URL_DEV`** / **`CAPACITOR_DEV_SERVER_URL`** (fallback `http://localhost:3000`); QA/prod default to **`https://qa.sortable.net`** / **`https://sortable.net`**, overridable with **`CAP_QA_URL`** / **`CAP_PROD_URL`**. **`server.cleartext`** is **`false`** for `https:` URLs. **`server.allowNavigation`** is built in [`server/utils/capacitorFlavor.js`](../server/utils/capacitorFlavor.js): default Sortable hosts plus **`CAP_ALLOW_NAVIGATION_HOSTS`** (comma-separated) and, in **dev**, the hostname of the resolved dev server URL (ngrok/LAN). [`scripts/capacitor-env.js`](../scripts/capacitor-env.js) loads **`.env`** for sync. Dev TLS: **`npm run cert`** or **`npm run generate-cert:selfsigned`** + **`SSL_CRT_FILE`** / **`SSL_KEY_FILE`** per [`vite.config.mjs`](../vite.config.mjs); trust **`certs/ca.pem`** on device. **Keyboard** (iOS): **`resize: 'none'`** in config so the keyboard overlays the WebView instead of shrinking layout and shifting the top bar; [`NativeContext.js`](../src/utils/NativeContext.js) calls **`Keyboard.setResizeMode({ mode: None })`** on startup.
+- **iOS app icon & launch screen**: Source mark [`resources/icon.png`](../resources/icon.png) (**≥ ~900px** square is accepted; ideal **1024×1024** for [`@capacitor/assets`](https://www.npmjs.com/package/@capacitor/assets)). Run **`npm run cap:assets`** to refresh **`AppIcon`**, **`Splash`** (asset catalog; legacy full-bleed fallbacks), and **`LaunchMark`** (via [`scripts/sync-launch-mark.js`](../scripts/sync-launch-mark.js)) used by [`LaunchScreen.storyboard`](../ios/App/App/Base.lproj/LaunchScreen.storyboard). **Capacitor’s splash plugin reuses that storyboard** (centered **`LaunchMark`**, “Sortable” label, plate **`sortable.splash`** **`#504AED`** — RGB sampled from `resources/icon.png` edge pixels). Web static shell: [`public/splash-shell.css`](../public/splash-shell.css) + [`index.html`](../index.html) (skipped on native after the Capacitor bridge is available). Dark-mode asset plates use **`sortable.bg`** (**`#0F172A`**).
 - **Client Config** (`src/config/`): Client-side configuration files
 - **Server Config** (`server/config/`): Server-side configuration files
 - **Legal copy** (`src/legal/policyDocuments.js`): Single source for Privacy/Terms section bodies and the shared effective-date boilerplate line; `/privacy` and `/terms` compose page chrome around these exports; `PolicyConsentModal` opens elevated `Modal` readers with the same sections.
@@ -130,8 +132,9 @@ Shared UI primitives live under `src/components/ui/` (`Button`, `Card`, `ChoiceC
 
 ### Styling System
 [Document your styling approach]
-- **Standardized Utilities**: Custom utilities defined in tailwind.config.js (`sortable.*`); OAuth button colors under **`sortable.oauth`** (Google multi-color logo paths use **`fill-sortable-oauth-googleBlue`** etc.).
+- **Standardized Utilities**: Custom utilities defined in tailwind.config.js (`sortable.*`); OAuth button colors under **`sortable.oauth`** (Google multi-color logo paths use **`fill-sortable-oauth-googleBlue`** etc.). `maxHeight.nav-dropdown` supports the mobile nav sheet on dynamic viewports (`dvh`).
 - **Spacing System**: Consistent padding, margins, and gaps
+- **Capacitor / iOS shell**: [`src/index.css`](../src/index.css) sets **`100dvh`** min-heights, **`overflow-x: hidden`**, **`safe-area-pt` / `safe-area-pb`** (used in [`Nav.js`](../src/components/Nav/Nav.js) and [`App.js`](../src/components/App.js)), and **`font-size: 1rem`** on **`input` / `textarea` / `select`** (excluding checkbox/radio/range/file) to avoid WKWebView focus zoom.
 
 ## Backend Architecture
 
@@ -258,22 +261,27 @@ Passport registers Google and Apple strategies when the corresponding env vars a
 | Environment | Typical `DEFAULT_CLIENT_URL` |
 | --- | --- |
 | Local dev (Vite + Express) | `http://localhost:3000` |
+| Public HTTPS dev tunnel (ngrok, etc.) | `https://<your-subdomain>.ngrok-free.app` (must match **`CAP_DEV_URL`**) |
 | QA (`qa.sortable.net`) | `https://qa.sortable.net` |
 | Production (`sortable.net`) | `https://sortable.net` |
 
+**Public HTTPS dev (ngrok)** — **`npm run dev`** then tunnel port **3000** (Vite proxies `/api` to the API on **8080**). Use **`npm run ngrok`**, which matches Vite’s **HTTP vs HTTPS** (if **`SSL_CRT_FILE`** + **`SSL_KEY_FILE`** are set and files exist, the script tunnels to **`https://127.0.0.1:3000`**; otherwise **`http://…`**). Tunneling with **`http://`** while Vite is serving **HTTPS** causes **ERR_NGROK_3004** (TLS bytes mistaken for HTTP). Ensure **`npm run dev`** is running before starting the tunnel. Set **`DEFAULT_CLIENT_URL`** to the tunnel origin; add the same origin and **`…/api/auth/google/callback`** / **`…/api/auth/apple/callback`** in Google Cloud Console and Apple Services ID return URLs. Set **`CAP_DEV_URL`** (or **`CAP_SERVER_URL_DEV` / `CAPACITOR_DEV_SERVER_URL`**) to that origin so the iOS WebView and OAuth share cookies. Ngrok terminates TLS for the device; local **`SSL_*`** certs are for **LAN** **`https://` Vite** only. Optional **`CAP_ALLOW_NAVIGATION_HOSTS`**: extra Domains (comma-separated) if an IdP or tunnel hostname is not already covered.
+
 **Google Cloud Console (OAuth 2.0 Web client)** — either one client listing all redirect URIs, or separate clients per environment with matching `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` per Cloud Run service:
 
-- **Authorized JavaScript origins**: `http://localhost:3000`, `https://qa.sortable.net`, `https://sortable.net` (add `https://www.sortable.net` if that origin is used).
-- **Authorized redirect URIs**: `http://localhost:3000/api/auth/google/callback`, `https://qa.sortable.net/api/auth/google/callback`, `https://sortable.net/api/auth/google/callback` (and `www` variant if applicable).
+- **Authorized JavaScript origins**: `http://localhost:3000`, tunnel origin when used, `https://qa.sortable.net`, `https://sortable.net` (add `https://www.sortable.net` if that origin is used).
+- **Authorized redirect URIs**: matching origins with path `/api/auth/google/callback` (e.g. localhost, QA, prod, and tunnel when used).
 
 **Apple (Sign in with Apple)** — Services ID web configuration:
 
-- **Return URLs**: same three absolute URLs as Google, with path `/api/auth/apple/callback`.
+- **Return URLs**: same absolute origins as Google, each with path `/api/auth/apple/callback` (include tunnel URL when testing via ngrok).
 - **Env**: `APPLE_CLIENT_ID` (Services ID), `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_KEY` (`.p8` private key contents). In `.env`, multi-line PEM is often stored as a single line with `\n` escapes.
 
 **Secrets (QA / production)**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_KEY` load from Secret Manager when unset on the process ([`server/utils/secrets.js`](../server/utils/secrets.js)).
 
-**Capacitor / native**: Web OAuth flows assume the SPA is served from the same site as the API in production. If Sign in with Apple or Google fails inside the iOS shell, add provider entries for the WebView origin (e.g. `capacitor://localhost`) only after confirming Apple/Google allow that configuration.
+**Native WebView** — `Main.storyboard` uses Capacitor’s **`CAPBridgeViewController`**. With **`SplashScreen` `launchAutoHide: false`**, JS must call **`SplashScreen.hide()`** when the web app is ready (see `capacitor.config.ts`).
+
+**Native OAuth return (`return_native=1`)** — On Capacitor, [`src/helpers/authHelpers.js`](../src/helpers/authHelpers.js) appends **`return_native=1`** to **`/api/auth/google`** and **`/api/auth/apple`** (including **`link-account`**) so the server issues a final redirect to **`Sortable://sortable.net<path>`** (custom scheme + [`capacitor.config.ts`](../capacitor.config.ts) **`server.hostname`**) after OAuth succeeds or fails. For **sign-in / sign-up**, [`GoogleButton`](../src/components/Auth/GoogleButton.js) and [`AppleButton`](../src/components/Auth/AppleButton.js) call **`openSystemBrowserForOAuthStart`** → [`@capacitor/browser`](../package.json) **`Browser.open`**, so Google and Apple run in the **system browser** (SFSafariViewController on iOS) instead of the main WKWebView — avoiding **WebKit error 102** / “Frame load interrupted” on **`accounts.google.com`**. **Link-account** (`linkAccount` prop) keeps a normal `<a href>` so the WebView sends the **session cookie** to **`/api/auth/…/link-account`**. The server embeds return-to-app intent in a short-lived JWT inside the OAuth **`state`** parameter ([`server/services/authService.js`](../server/services/authService.js) **`createOAuthReturnNativeState`** / **`hydrateOAuthReturnToNativeFromOAuthState`**, signed with **`SESSION_SECRET`) so **`return_native`** survives when the IdP runs outside the WebView session. **`req.logIn`** regenerates the session, so the callback passes **`returnNativeFromSignedState`** into **`takeOAuthClientRedirect`** (see [`server/routes/auth.js`](../server/routes/auth.js)) rather than relying on a pre-login session flag alone. [`src/utils/sortableAppUrl.js`](../src/utils/sortableAppUrl.js) maps inbound custom-scheme URLs; [`src/components/App.js`](../src/components/App.js) listens with **`@capacitor/app`** **`appUrlOpen`** and **`navigate`**s. Troubleshooting logs use the **`[oauth-native]`** (API) and **`[oauth-native-client]`** (WKWebView) prefixes. **`Sortable://`** targets are only emitted for safe internal paths (`/` + relative path, no protocol-relative URLs).
 
 ### Native Integrations
 - **Capacitor (latest)**: iOS/Android native features
@@ -369,7 +377,7 @@ The QA environment serves as a staging environment that mirrors production for:
    - QA-specific Firebase project (recommended)
 
 5. **Configuration**:
-   - QA-specific `capacitor.config.ts` settings
+   - iOS QA bundle: **`npm run s:qa`** ( **`CAP_APP_ENV=qa`**, `net.sortable.qa`, **`server.url`** `https://qa.sortable.net` or **`CAP_QA_URL`**)
    - QA-specific CORS origins
    - QA-specific rate limiting (may be more lenient)
    - QA-specific logging levels (more verbose for debugging)

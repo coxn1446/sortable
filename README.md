@@ -66,22 +66,47 @@ Map custom domains (`gcloud beta run domain-mappings create`) and add the DNS re
 
 ## Capacitor (iOS)
 
+Three **native bundles** (AuraSphere-style), selected only when you run **`npx cap sync ios`** — **`CAP_APP_ENV`**, not `NODE_ENV`:
+
+| Script | Bundle ID | Default `server.url` |
+| --- | --- | --- |
+| `npm run s:dev` | `net.sortable.dev` | Display **Sortable Dev** · LAN URL from `.env` |
+| `npm run s:qa` | `net.sortable.qa` | Display **Sortable QA** · `CAP_QA_URL` or `https://qa.sortable.net` |
+| `npm run s:prod` | `net.sortable.prod` | Display **Sortable Prod** · `CAP_PROD_URL` or `https://sortable.net` |
+
+Register **`net.sortable.dev`**, **`net.sortable.qa`**, and **`net.sortable.prod`** in Apple Developer if you install all three side by side.
+
+The **same** Xcode project and asset catalogs (**`AppIcon`**, **`Splash`**) are used for every flavor; only `appId`, display name, and dev-server URL change when you sync.
+
 The first time you set up iOS (requires Xcode):
 
 ```bash
 npx cap add ios
 npm run build
-npm run s     # npx cap sync ios
+npm run s:dev    # or s:qa / s:prod
 npx cap open ios
 ```
 
-After adding `resources/icon.png` and `resources/splash.png` (from the brand logo), generate asset catalogs:
+**Icon & splash** (see [Capacitor — Splash Screens and Icons](https://capacitorjs.com/docs/guides/splash-screens-and-icons)): put the brand mark at **`resources/icon.png`** (canonical source; optional duplicate **`resources/splash.png`** is unused by the generator). Install deps then whenever the logo changes, regenerate native assets and sync:
 
 ```bash
-npx @capacitor/assets generate --ios
+npm install
+npm run cap:assets
+npm run s:dev   # or the QA/prod sync script you need
 ```
 
-Subsequent updates: `npm run build && npm run s`.
+`cap:assets` runs **`@capacitor/assets`** in “easy” mode against **`resources/`** with plate colors **`#504AED`** (**`sortable.splash`**, sampled from the icon PNG background) and **`#0F172A`** (`sortable-bg`) for dark variants, then copies the mark into **`LaunchMark.imageset`** — matching [`capacitor.config.ts`](capacitor.config.ts) and [`LaunchScreen.storyboard`](ios/App/App/Base.lproj/LaunchScreen.storyboard).
+
+Subsequent updates: `npm run build` then the **sync script for the flavor** you are working on (e.g. `npm run s:dev` for dev).
+
+**Physical iPhone (recommended: HTTPS + self-signed, same pattern as AuraSphere):**
+
+1. `npm run cert` (or `npm run generate-cert:selfsigned`) — writes `certs/cert.pem`, `key.pem`, `ca.pem` (includes **`192.168.0.171`** and other LAN SANs; edit the script to add more IPs if needed).
+2. In `.env`, set `SSL_CRT_FILE=./certs/cert.pem`, `SSL_KEY_FILE=./certs/key.pem`, **`CAPACITOR_DEV_SERVER_URL=https://192.168.0.171:3000`** (use your Mac’s IP), and **`DEFAULT_CLIENT_URL`** to the same `https://…:3000` origin for OAuth.
+3. AirDrop **`certs/ca.pem`** to the phone → **Settings → General → About → Certificate Trust Settings** → enable full trust for that cert.
+4. `npm run s:dev`, then **`npm run dev`** and launch from Xcode. **`scripts/dev.js` loads `.env` before Vite starts**, so `SSL_*` is picked up and Vite serves **HTTPS** on :3000 (required when `CAPACITOR_DEV_SERVER_URL` is `https://`). If you see **ERR_SSL_PROTOCOL_ERROR**, the dev server is still on HTTP — check for a `[vite] … no TLS` warning and confirm **`SSL_CRT_FILE` / `SSL_KEY_FILE`** paths exist. The WebView must not use `localhost` on device (that targets the phone itself).
+
+Simulator over HTTP: omit `SSL_*` and LAN dev URL env vars (dev flavor defaults to `http://localhost:3000`).
 
 ## Scripts
 
@@ -94,7 +119,12 @@ Subsequent updates: `npm run build && npm run s`.
 | `npm run build` | Build the client (`vite build`, output to `build/`) |
 | `npm run preview` | Preview the production build |
 | `npm test` | Jest |
-| `npm run s` | `npx cap sync ios` |
+| `npm run s:dev` | `CAP_APP_ENV=dev` **`npx cap sync ios`** — **`net.sortable.dev`** + dev `server.url` from `.env` |
+| `npm run s:qa` | `CAP_APP_ENV=qa` — **`net.sortable.qa`** → `https://qa.sortable.net` (or `CAP_QA_URL`) |
+| `npm run s:prod` | `CAP_APP_ENV=prod` — **`net.sortable.prod`** → `https://sortable.net` (or `CAP_PROD_URL`) |
+| `npm run cap:assets` | Regenerate iOS **AppIcon** + **Splash** from `resources/icon.png` via `@capacitor/assets` |
+| `npm run cert` | Writes `certs/*.pem` for Vite HTTPS (Aura-style LAN SAN list) |
+| `npm run generate-cert:selfsigned` | Same as `npm run cert` |
 | `npm run check-secrets` | Verify required env vars are set |
 
 ## Deploying cheaply on Google Cloud
@@ -134,6 +164,7 @@ sortable/
 ├── serverIndex.js
 ├── server/                 Express app, loaders, routes, services, queries
 ├── src/                    React app (components, routes, store, helpers, hooks, utils)
+├── resources/              Native asset source: `icon.png` for `@capacitor/assets` (`npm run cap:assets`)
 ├── public/                 Static assets (manifest, icons)
 ├── scripts/                dev.js, check-secrets.js
 └── ios/                    (created by `npx cap add ios`)
